@@ -24,11 +24,11 @@ class Hist(object):
             for x in xs:
                 self.fill(x)
 
-    def export(self, canvas, d="plots"):
+    def export(self, canvas, d="plots", suffix=""):
         self.hist.Draw('hist')
         self.hist.SetMaximum(self.hist.GetMaximum()*1.5)
         self.hist.GetXaxis().SetTitle(self.title)
-        canvas.SaveAs(d+"/"+self.name+".pdf")
+        canvas.SaveAs(d+"/"+self.name+suffix+".pdf")
 
 class Plots(object):
     """
@@ -58,7 +58,7 @@ class Plots(object):
         h = self.get(name)
         h.fills(xs, ws)
 
-    def export(self, d="plots"):
+    def export(self, d="plots", suffix=""):
         for n, h in self.plots.iteritems():
-            h.export(self.canvas, d)
+            h.export(self.canvas, d, suffix)
             

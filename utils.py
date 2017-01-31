@@ -14,7 +14,7 @@ def get_my_print(verbose):
     """
     return lambda s, l=2: my_print(s, l, verbose)
 
-def get_lead_jet(entry):
+def get_leadjet(entry):
     """
     Returns a ROOT 4d vector corresponding to the leadjet,
     the jet with highest pT
@@ -44,7 +44,7 @@ def get_truth_parts(mytree):
     Args:
         mytree: a ROOT tree
     Returns:
-        truth_parts: a dict {"pt": pt ...}
+        truth_parts: a dict d[barcode] = dict({"pt": pt ...})
     """
     truth_parts = dict()
     for j in range(mytree.Truth_N):
@@ -53,11 +53,12 @@ def get_truth_parts(mytree):
         truth_eta = mytree.Truth_Eta[j]
         truth_phi = mytree.Truth_Phi[j]
         truth_parts[truth_barcode] = {"pt": truth_pt, "eta": truth_eta, "phi": truth_phi}
+        # print truth_barcode, truth_pt, truth_eta, truth_phi
 
     return truth_parts
 
 
-def get_cells_info(mytree):
+def get_cells(mytree):
     """
     Returns a dict with information about cells
     Args:
@@ -68,19 +69,44 @@ def get_cells_info(mytree):
     """
     cells = dict()
     for j in range(mytree.Cell_N):
-        cell_id = mytree.Cell_ID[j] # unique id of cell
-        cell_eta = mytree.Cell_eta[j] # eta
-        cell_phi = mytree.Cell_phi[j] # phi
-        cell_dep = mytree.Cell_dep[j] # cal layer
-        cell_e = mytree.Cell_E[j] # energy deposited in the cell
-        cell_vol = mytree.Cell_vol[j] # volume
-        # cell_barcodes = mytree.Cell_barcodes[j]
+        uid = mytree.Cell_ID[j] # unique id of cell
+        eta = mytree.Cell_eta[j] # eta
+        phi = mytree.Cell_phi[j] # phi
+        dep = mytree.Cell_dep[j] # cal layer
+        e = mytree.Cell_E[j] # energy deposited in the cell
+        vol = mytree.Cell_vol[j] # volume
+        
+        barcodes = mytree.Cell_barcodes
+        # print len(barcodes) # prints 0
         # print mytree.Cell_barcodes
         # print("{}, {}, {}, {}".format(cell_eta, cell_phi, cell_dep, cell_vol))
-        cells[cell_id] = {"eta": cell_eta, "phi": cell_phi, 
-             "dep": cell_dep, "e": cell_e, "vol": cell_vol}
+        cells[uid] = {"eta": eta, "phi": phi, 
+             "dep": dep, "e": e, "vol": vol}
 
     return cells
+
+def get_tracks(mytree):
+    """
+    Returns a dict with information about the tracks
+    Args:
+        mytree: ROOT tree
+    Returns:
+        tracks: dict s.t. tracks[track_id] = {"eta": ..., "phi": ...}
+    """
+    nb_tracks = mytree.Track_N
+    nb_truth_parts = mytree.Truth_N
+
+    tracks = dict()
+    for j in range(nb_tracks):
+        pt = mytree.Track_Pt[j]
+        eta = mytree.Track_Eta[j]
+        phi = mytree.Track_Phi[j]
+        barcode = mytree.Track_barcode[j]
+        # Track_MCprob = mytree.Track_MCprob[j] # TODO, what is it?
+        uid = mytree.Track_ID[j]
+        tracks[uid] = {"eta": eta, "phi": phi, "barcode": barcode}
+
+    return tracks
 
 def topo_cluster_in_jet(leadjet, mytree, j):
     """
@@ -102,9 +128,10 @@ def topo_cluster_in_jet(leadjet, mytree, j):
     return leadjet.DeltaR(topovec) > 0.4
 
 
-def extract_cells(cells, cell_ids, cell_weights=None):
+def map_cells(cells, cell_ids, cell_weights=None):
     """
-    Returns data from the cells with ids in cell_ids
+    Extracts cell information from cells dict for the cells whose id
+    is in cell_ids.
 
     Args:
         cells: dict of dict.
@@ -127,6 +154,32 @@ def extract_cells(cells, cell_ids, cell_weights=None):
     e_tot = sum([e * w for e, w in zip(cells_e, cell_weights)] if cell_weights is not None else cells_e)
 
     return range_eta, range_phi, range_dep, vol_tot, e_tot
+
+def map_truth_parts(truth_parts, mytree, j):
+    """
+    Maps barcodes of the j-th topocluster particles to their data
+    in truth_parts dictionary
+
+    Args:
+        truth_parts: a dict d[barcode] = dict({"pt": pt ...}) 
+            with data about truth particles
+        mytree: a ROOT tree
+        j: (int), j-th entry of the tree
+
+    Returns:
+        Extracted information from truth_parts
+    """
+    # pdgids and barcodes (same length)
+    pdgids = mytree.Topocluster_pdgids[j] # type of particle?
+    barcodes = mytree.Topocluster_barcodes[j] # id of the particle
+    
+    # truth_pt = [uid_ for uid_ in barcodes if uid_ not in truth_parts]
+    # TODO: issue, sometimes there is uid_ = 0 in barcodes that as no 
+    # correspondance in the truth_parts barcode extracted for the event.
+    truth_pt = [uid_ for uid_ in barcodes if uid_ in truth_parts]
+    # print truth_pt
+
+    return True
 
 def nb_of_truth_parts(mytree, j):
     """
@@ -153,3 +206,4 @@ def nb_of_truth_parts(mytree, j):
         pass
 
     return nparts, len(mytree.Topocluster_truthEfrac[j]), props
+
