@@ -1,0 +1,4 @@
+*.pyc
+*.pdf
+data/
+plots/
