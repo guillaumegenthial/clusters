@@ -1,13 +1,14 @@
 import ROOT
 import numpy as np
-from utils import get_leadjet, get_my_print, \
+from utils.data_utils import get_leadjet, \
     get_cells, get_truth_parts, topo_cluster_in_jet, \
     map_cells, nb_of_truth_parts, map_truth_parts, \
     get_tracks
+from utils.general_utils import get_my_print
 from ROOT_plots_wrapper import Hist, Plots
 import config
 
-my_print = get_my_print(config.VERBOSE)
+my_print = get_my_print(config.verbose)
 
 # 0. ROOT data
 myfile = ROOT.TFile("data/ntuple_v3_2000k.root")
@@ -29,7 +30,7 @@ plots.add("CellWeights", "Weights of cells inside a cluster", 20, -0.1, 4)
 
 data = {"input": [], "output": []}
 # 2. iterate over entries
-for i in range(min(mytree.GetEntries(), config.MAX_EVENTS)):
+for i in range(min(mytree.GetEntries(), config.max_events)):
     mytree.GetEntry(i)
     plots.fill("NJets", mytree.NJets)
     if (i%100==0):
@@ -70,5 +71,5 @@ for i in range(min(mytree.GetEntries(), config.MAX_EVENTS)):
 
 
 # 4. Save histogram
-suffix = "_"+config.EXP_NAME
+suffix = "_"+config.exp_name
 plots.export(d="plots", suffix=suffix)

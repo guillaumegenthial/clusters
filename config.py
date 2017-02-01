@@ -1,4 +1,13 @@
-# 0 : print everything 1 : print only summary : 2 : minimal printing
-EXP_NAME = "test"
-VERBOSE = 1
-MAX_EVENTS = 10
+exp_name = "test"
+verbose = 1 # 0 : print everything 1 : print only summary : 2 : minimal printing
+max_events = 500
+data_path = "data/ntuple_v3_2000k.root"
+tree_name = "SimpleJet"
+input_size = 5
+output_size = 5
+lr = 0.01
+n_epochs = 20
+batch_size = 20
+data_verbosity = 2
+dev_size = 0.1
+test_size = 0.2

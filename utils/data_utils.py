@@ -1,18 +1,6 @@
 import ROOT
 import numpy as np
 
-def my_print(string, level=2, verbose=0):
-    """
-    Prints string if level >= verbose
-    """
-    if level >= verbose:
-        print(string)
-
-def get_my_print(verbose):
-    """
-    Returns lambda function to print with given verbose level
-    """
-    return lambda s, l=2: my_print(s, l, verbose)
 
 def get_leadjet(entry):
     """
