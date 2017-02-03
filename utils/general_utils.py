@@ -1,6 +1,7 @@
 import sys
 import time
 import numpy as np
+import pickle
 
 def my_print(string, level=2, verbose=0):
     """
@@ -17,6 +18,13 @@ def get_my_print(verbose):
     """
     return lambda s, l=2: my_print(s, l, verbose)
 
+def pickle_dump(obj, path):
+    with open(path, "w") as f:
+        pickle.dump(obj, f)
+
+def pickle_load(path):
+    with open(path) as f:
+        return pickle.load(f)
 
 def minibatches(data, minibatch_size, shuffle=True):
     """
@@ -48,10 +56,10 @@ def preprocess_data(data, preprocess, output_size):
         list of [x, y] where x, y are np arrays
     """
     x = np.array([d[0] for d in data])
-    y = np.array([d[1] for d in data])
+    y = np.array([min(d[1], output_size-1) for d in data])
     x = preprocess(x)
     one_hot = np.zeros((y.size, output_size))
-    one_hot[np.arange(y.size), y] = 1
+    one_hot[np.arange(y.size),y] = 1
     return [x, one_hot]
 
 def split_data(data, dev=0.1, test=0.2):
@@ -122,6 +130,19 @@ def baseline(data, target=1):
     """
 
     return np.mean(np.argmax(data[1], axis=1) == 1)
+
+def dump_results(target, label, path):
+    """
+    Writes results in a txt file
+    Args:
+        target: np array of the true labels [1, 2, 1, 1 ...]
+        label: np array of the predicted labels
+        path: path where to write the results
+    """
+    with open(path, "w") as f:
+        f.write("True Pred\n")
+        for t, l in zip(target, label):
+            f.write("{}    {}\n".format(t, l))
 
 class Progbar(object):
     """

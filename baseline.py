@@ -1,9 +1,12 @@
 import numpy as np
 import tensorflow as tf
+import pickle
+import time
 from utils.tf_utils import xavier_weight_init
 from utils.general_utils import minibatches, Progbar, \
                 default_preprocess, preprocess_data, \
-                split_data, baseline
+                split_data, baseline, pickle_dump, pickle_load, \
+                dump_results
 from dataset import Dataset
 import config
 
@@ -12,16 +15,25 @@ import config
 x = tf.placeholder(tf.float32, shape=[None, config.input_size])
 y = tf.placeholder(tf.int32, shape=[None, config.output_size])
 
-W = tf.get_variable('W', (config.input_size, config.output_size), 
+W = tf.get_variable('W', (config.input_size, config.hidden_size), 
                         initializer=xavier_weight_init())
 
-b = tf.get_variable('b', [config.output_size])
+b = tf.get_variable('b', [config.hidden_size])
 pred = tf.matmul(x, W) + b
+# h = tf.nn.relu(tf.matmul(x, W) + b)
+# h_drop = tf.nn.dropout(h, config.dropout)
+
+# W2 = tf.get_variable('W2', (config.hidden_size, config.output_size),
+#                         initializer=xavier_weight_init())
+# b2 = tf.get_variable('b2', [config.output_size])
+# pred = tf.matmul(h_drop, W2) + b2
 
 losses = tf.nn.softmax_cross_entropy_with_logits(pred, y)
 loss = tf.reduce_mean(losses)
 
-correct_prediction = tf.equal(tf.argmax(pred, axis=1), tf.argmax(y, axis=1))
+target = tf.argmax(y, axis=1)
+label = tf.argmax(pred, axis=1)
+correct_prediction = tf.equal(label, target)
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 train_op = tf.train.AdamOptimizer(config.lr).minimize(loss)
@@ -31,9 +43,16 @@ init = tf.global_variables_initializer()
 print 80 * "="
 print "INITIALIZING"
 print 80 * "="
-data = Dataset(config.data_path, config.tree_name, 
-               config.max_events, config.output_size, 
-               config.data_verbosity)
+
+t0 = time.time()
+if not config.load_from_export_data_path:
+    data = Dataset(config.data_path, config.tree_name, 
+                   config.max_events, config.output_size, 
+                   config.data_verbosity)
+    data = data.get_data()
+    pickle_dump(data, config.export_data_path)
+else:
+    data = pickle_load(config.export_data_path)
 
 data = preprocess_data(data, default_preprocess, config.output_size)
 train_examples, dev_set, test_set = split_data(data, config.dev_size,
@@ -41,6 +60,8 @@ train_examples, dev_set, test_set = split_data(data, config.dev_size,
 
 dev_baseline =  baseline(dev_set)
 test_baseline = baseline(test_set)
+t1 = time.time()
+print "- done. (time elapsed {:.2f})".format(t1 - t0)
 
 with tf.Session() as sess:
     sess.run(init)
@@ -66,9 +87,10 @@ with tf.Session() as sess:
     print 80 * "="
     print "TESTING"
     print 80 * "="
-    print "Final evaluation on test set",
+    print "Final evaluation on test set"
     feed = {x: test_set[0], y: test_set[1]}
-    acc, = sess.run([accuracy], feed_dict=feed)
+    acc, tar, lab = sess.run([accuracy, target, label], feed_dict=feed)
+    dump_results(tar, lab, config.results_path)
     print "- test acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, test_baseline * 100)
 
 

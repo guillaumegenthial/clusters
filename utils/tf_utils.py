@@ -10,6 +10,7 @@ def xavier_weight_init():
     Xavier initialization distribution.
 
     Hint: You might find tf.random_uniform useful.
+    # look at tf.contrib
     """
     def _xavier_initializer(shape, **kwargs):
         """Defines an initializer for the Xavier distribution.

@@ -1,5 +1,6 @@
 import ROOT
 import numpy as np
+import time
 from utils.data_utils import get_leadjet, \
     get_cells, get_truth_parts, topo_cluster_in_jet, \
     map_cells, nb_of_truth_parts, map_truth_parts, \
@@ -29,9 +30,9 @@ class Dataset(object):
                 self.my_print("Entry {}, NJets {}".format(i, mytree.NJets), 1)
 
             leadjet     = get_leadjet(mytree)
-            cells       = get_cells(mytree)
-            truth_parts = get_truth_parts(mytree)
-            tracks      = get_tracks(mytree)
+            cells       = get_cells(mytree) # sloooow
+            truth_parts = get_truth_parts(mytree) # fast
+            tracks      = get_tracks(mytree) # fast
 
             for j in range(len(mytree.Topocluster_E)):
                 if (topo_cluster_in_jet(leadjet, mytree, j)): 
@@ -67,9 +68,12 @@ class Dataset(object):
         self.length = i
         return data
 
-
 if __name__ == "__main__":
     data = Dataset()
+    t0 = time.time()
     for x, y in data:
-        print(x, y)
+        # print(y)
+        continue
+    t1 = time.time()
+    print("Time elapsed : {:.2f}".format(t1 - t0))
 
