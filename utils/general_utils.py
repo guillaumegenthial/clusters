@@ -45,17 +45,17 @@ def minibatches(data, minibatch_size, shuffle=True):
         yield [d[minibatch_indices] for d in data]
 
 
-def preprocess_data(data, preprocess, output_size):
+def preprocess_data(data, preprocess, output_size, feature_extractor=lambda x: x):
     """
     Preprocess data with function preprocess
     Args:
-        data: object on which we can iterate
+        data: object on which we can iterate and yields X, y
         preprocess: (function) np array -> np array
         output_size: (int) for one hot encoding
     Returns:
         list of [x, y] where x, y are np arrays
     """
-    x = np.array([d[0] for d in data])
+    x = np.array([feature_extractor(d[0]) for d in data])
     y = np.array([min(d[1], output_size-1) for d in data])
     x = preprocess(x)
     one_hot = np.zeros((y.size, output_size))

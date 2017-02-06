@@ -39,13 +39,9 @@ class Dataset(object):
                     continue
 
                 cell_ids = [id_ for id_ in mytree.Topocluster_cellIDs[j]]
-                cell_weights = [w_ for w_ in mytree.Topocluster_cellWeights[j]]
+                nparts = nb_of_truth_parts(mytree, j)
 
-                range_eta, range_phi, range_dep, vol_tot, e_tot = map_cells(cells, cell_ids, cell_weights)
-                nparts, nparts_tot, props = nb_of_truth_parts(mytree, j)
-                _ = map_truth_parts(truth_parts, mytree, j)
-
-                x = [range_eta, range_phi, range_dep, vol_tot, e_tot]
+                x = map_cells(cells, cell_ids)
                 y = nparts if nparts < self.max_nparts else (self.max_nparts-1)
 
                 yield x, y

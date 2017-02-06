@@ -44,8 +44,8 @@ for i in range(mytree.GetEntries()):
         for k in range(len(mytree.Topocluster_cellIDs[j])):
             k2 = mytree.Topocluster_cellIDs[j][k]
             cellvector = TLorentzVector()
-            # why 0.001?
-            # weight in topocluster?
+            # why 0.001 to make it in GeV
+            # weight in topocluster -> topocluster algo
             cellvector.SetPtEtaPhiM(0.001*mytree.Topocluster_cellWeights[j][k]*mytree.Cell_E[k2]/np.cosh(mytree.Cell_eta[k2]),mytree.Cell_eta[k2],mytree.Cell_phi[k2],0.)
             cluster_cells+=[cellvector.Pt()]
         pass

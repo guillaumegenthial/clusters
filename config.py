@@ -1,6 +1,6 @@
 exp_name = "plots_2k"
 verbose = 1 # 0 : print everything 1 : print only summary : 2 : minimal printing
-max_events = 100
+max_events = 20
 data_path = "data/ntuple_v3_2000k.root"
 export_data_path = "data/ntuple_v3_2000k.npy"
 load_from_export_data_path = True # speedup x2000

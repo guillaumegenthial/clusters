@@ -7,6 +7,7 @@ from utils.general_utils import minibatches, Progbar, \
                 default_preprocess, preprocess_data, \
                 split_data, baseline, pickle_dump, pickle_load, \
                 dump_results
+from utils.data_utils import simple_features
 from dataset import Dataset
 import config
 
@@ -54,7 +55,8 @@ if not config.load_from_export_data_path:
 else:
     data = pickle_load(config.export_data_path)
 
-data = preprocess_data(data, default_preprocess, config.output_size)
+data = preprocess_data(data, default_preprocess, 
+                       config.output_size, simple_features)
 train_examples, dev_set, test_set = split_data(data, config.dev_size,
                                                config.test_size)
 

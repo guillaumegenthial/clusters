@@ -25,6 +25,30 @@ def get_leadjet(entry):
 
     return leadjet
 
+def get_leadjets(entry, min_energy=20, max_eta=1):
+    """
+    Returns a list of ROOT 4d vector corresponding to the leadjets,
+
+    Args:
+        entry: an entry of a ROOT tree
+        min_energy: min energy of jet in GeV
+        max_eta: max eta range
+    Returns:
+        leadjets: a list of 4d ROOT vector (pT, eta, phi, PM) 
+            pT : transverse momentum
+            PM : mass of the truth jets
+    """
+    leadjets = []
+    for j in range(entry.NJets):
+        if (entry.JetsPt[j] > min_energy and abs(entry.JetsEta[j]) < max_eta):
+            leadjets += [ROOT.TLorentzVector(entry.JetsPt[j], entry.JetsEta[j],
+                                                 entry.JetsPhi[j], entry.JetsPM[j])]
+            pass
+        pass
+
+    return leadjets
+
+
 def get_truth_parts(mytree):
     """
     Returns a dict with information about truth particles
@@ -40,8 +64,9 @@ def get_truth_parts(mytree):
         truth_pt = mytree.Truth_Pt[j]
         truth_eta = mytree.Truth_Eta[j]
         truth_phi = mytree.Truth_Phi[j]
-        truth_parts[truth_barcode] = {"pt": truth_pt, "eta": truth_eta, "phi": truth_phi}
-        # print truth_barcode, truth_pt, truth_eta, truth_phi
+        track_id = mytree.Truth_MatchTrack_ID[j]
+        truth_parts[truth_barcode] = {"pt": truth_pt, "eta": truth_eta, 
+                    "phi": truth_phi, "track": track_id}
 
     return truth_parts
 
@@ -107,16 +132,33 @@ def topo_cluster_in_jet(leadjet, mytree, j):
         j: int, index of topocluster
 
     Returns:
-        boolean
+        True if topo cluster in a 0.4 of leadjet
     """
     topovec = ROOT.TLorentzVector()
     topovec.SetPtEtaPhiM(mytree.Topocluster_E[j]/np.cosh(mytree.Topocluster_eta[j]),
         mytree.Topocluster_eta[j],mytree.Topocluster_phi[j],0.)
     # only take the clusters inside the highest pT jet!
-    return leadjet.DeltaR(topovec) > 0.4
+    return leadjet.DeltaR(topovec) < 0.4
 
+def topo_cluster_in_jets(leadjets, mytree, j):
+    """
+    Returns true if the j-th topocluster for mytree is 
+    within 0.4 of one of the leadjets
 
-def map_cells(cells, cell_ids, cell_weights=None):
+    Args:
+        leadjets: a list of ROOT 4d vector
+        mytree: ROOT tree
+        j: int, index of topocluster
+
+    Returns:
+        boolean
+    """
+    for leadjet in leadjets:
+        if topo_cluster_in_jet(leadjet, mytree, j):
+            return True
+    return False
+
+def map_cells(cells, cell_ids):
     """
     Extracts cell information from cells dict for the cells whose id
     is in cell_ids.
@@ -128,20 +170,31 @@ def map_cells(cells, cell_ids, cell_weights=None):
         cell_weights: (optional) list of weights, same len as cell_ids,
             weights of each cell in the
     Returns:
-        
+        dictionary: {cell_id: {"eta": eta, ...}, ...} 
     """
-    cells_eta = [cells[cell_id]["eta"] for cell_id in cell_ids]
-    cells_phi = [cells[cell_id]["phi"] for cell_id in cell_ids]
-    cells_dep = [cells[cell_id]["dep"] for cell_id in cell_ids]
-    cells_e = [cells[cell_id]["e"] for cell_id in cell_ids]
-    cells_vol = [cells[cell_id]["vol"] for cell_id in cell_ids]
-    range_eta = max(cells_eta) - min(cells_eta)
-    range_phi = max(cells_phi) - min(cells_phi)
-    range_dep = max(cells_dep) - min(cells_dep)
+    return {id_: d_ for id_, d_ in cells.iteritems() if id_ in cell_ids}
+
+
+def simple_features(cells, cell_weights=None):
+    """
+    Returns a fixed size np array
+    Args:
+        cells : dict {cell_uid: {"eta": eta, ...}, ...}
+    Returns:
+        f: np array [range_eta, ...]
+    """
+    cells_eta = [d_["eta"] for d_ in cells.itervalues()]
+    cells_phi = [d_["phi"] for d_ in cells.itervalues()]
+    cells_dep = [d_["dep"] for d_ in cells.itervalues()]
+    cells_e = [d_["e"] for d_ in cells.itervalues()]
+    cells_vol = [d_["vol"] for d_ in cells.itervalues()]
+    r_eta = max(cells_eta) - min(cells_eta)
+    r_phi = max(cells_phi) - min(cells_phi)
+    r_dep = max(cells_dep) - min(cells_dep)
     vol_tot = sum(cells_vol)
     e_tot = sum([e * w for e, w in zip(cells_e, cell_weights)] if cell_weights is not None else cells_e)
 
-    return range_eta, range_phi, range_dep, vol_tot, e_tot
+    return np.array([r_eta, r_phi, r_dep, vol_tot, e_tot])
 
 def map_truth_parts(truth_parts, mytree, j):
     """
@@ -161,15 +214,37 @@ def map_truth_parts(truth_parts, mytree, j):
     pdgids = mytree.Topocluster_pdgids[j] # type of particle?
     barcodes = mytree.Topocluster_barcodes[j] # id of the particle
     
-    # truth_pt = [uid_ for uid_ in barcodes if uid_ not in truth_parts]
     # TODO: issue, sometimes there is uid_ = 0 in barcodes that as no 
     # correspondance in the truth_parts barcode extracted for the event.
-    truth_pt = [uid_ for uid_ in barcodes if uid_ in truth_parts]
-    # print truth_pt
-
-    return True
+    # no_match = [uid_ for uid_ in barcodes if uid_ not in truth_parts]
+    # if len(no_match) > 0:
+    #     print "Parts not found: ", no_match
+    
+    return {id_: d_ for id_, d_ in truth_parts.iteritems() if id_ in barcodes}
 
 def nb_of_truth_parts(mytree, j):
+    """
+    Returns the nb of truth particles that deposit more than 
+    0.1 of their energy in the topocluster
+
+    Args:
+        mytree: Root tree
+        j: index of tree entry
+
+    Returns:
+        nparts: (int) nb of truth particles that deposited > 0.1
+    """
+    nparts = 0
+    for k in range(len(mytree.Topocluster_truthEfrac[j])):
+        prop = mytree.Topocluster_truthEfrac[j][k]
+        if (prop > 0.1):
+            nparts+=1
+            pass
+        pass
+
+    return nparts
+
+def full_nb_of_truth_parts(mytree, j):
     """
     Returns the nb of truth particles that deposit more than 
     0.1 of their energy in the topocluster
@@ -194,4 +269,5 @@ def nb_of_truth_parts(mytree, j):
         pass
 
     return nparts, len(mytree.Topocluster_truthEfrac[j]), props
+
 
