@@ -19,10 +19,12 @@ def get_leadjet(entry):
 
     for j in range(entry.NJets):
         if (entry.JetsPt[j] > leadjet.Pt()):
-            leadjet.SetPtEtaPhiM(entry.JetsPt[j],entry.JetsEta[j],entry.JetsPhi[j],entry.JetsPM[j])
+            leadjet.SetPtEtaPhiM(entry.JetsPt[j], entry.JetsEta[j],
+                                 entry.JetsPhi[j], entry.JetsPM[j])
             pass
         pass
 
+    # print leadjet[0], leadjet[1], leadjet[2], leadjet[3]
     return leadjet
 
 def get_leadjets(entry, min_energy=20, max_eta=1):
@@ -41,8 +43,10 @@ def get_leadjets(entry, min_energy=20, max_eta=1):
     leadjets = []
     for j in range(entry.NJets):
         if (entry.JetsPt[j] > min_energy and abs(entry.JetsEta[j]) < max_eta):
-            leadjets += [ROOT.TLorentzVector(entry.JetsPt[j], entry.JetsEta[j],
-                                                 entry.JetsPhi[j], entry.JetsPM[j])]
+            jet = ROOT.TLorentzVector()
+            jet.SetPtEtaPhiM(entry.JetsPt[j], entry.JetsEta[j],
+                             entry.JetsPhi[j], entry.JetsPM[j])
+            leadjets += [jet]
             pass
         pass
 

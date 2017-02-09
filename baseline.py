@@ -60,7 +60,7 @@ data = preprocess_data(data, default_preprocess,
 train_examples, dev_set, test_set = split_data(data, config.dev_size,
                                                config.test_size)
 
-dev_baseline =  baseline(dev_set)
+dev_baseline  =  baseline(dev_set)
 test_baseline = baseline(test_set)
 t1 = time.time()
 print "- done. (time elapsed {:.2f})".format(t1 - t0)
