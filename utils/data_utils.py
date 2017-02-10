@@ -178,28 +178,6 @@ def map_cells(cells, cell_ids):
     """
     return {id_: d_ for id_, d_ in cells.iteritems() if id_ in cell_ids}
 
-
-def simple_features(cells, cell_weights=None):
-    """
-    Returns a fixed size np array
-    Args:
-        cells : dict {cell_uid: {"eta": eta, ...}, ...}
-    Returns:
-        f: np array [range_eta, ...]
-    """
-    cells_eta = [d_["eta"] for d_ in cells.itervalues()]
-    cells_phi = [d_["phi"] for d_ in cells.itervalues()]
-    cells_dep = [d_["dep"] for d_ in cells.itervalues()]
-    cells_e = [d_["e"] for d_ in cells.itervalues()]
-    cells_vol = [d_["vol"] for d_ in cells.itervalues()]
-    r_eta = max(cells_eta) - min(cells_eta)
-    r_phi = max(cells_phi) - min(cells_phi)
-    r_dep = max(cells_dep) - min(cells_dep)
-    vol_tot = sum(cells_vol)
-    e_tot = sum([e * w for e, w in zip(cells_e, cell_weights)] if cell_weights is not None else cells_e)
-
-    return np.array([r_eta, r_phi, r_dep, vol_tot, e_tot])
-
 def map_truth_parts(truth_parts, mytree, j):
     """
     Maps barcodes of the j-th topocluster particles to their data

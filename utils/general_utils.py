@@ -2,6 +2,8 @@ import sys
 import time
 import numpy as np
 import pickle
+import copy
+import matplotlib.pyplot as plt
 
 def my_print(string, level=2, verbose=0):
     """
@@ -26,110 +28,6 @@ def pickle_load(path):
     with open(path) as f:
         return pickle.load(f)
 
-def minibatches(data, minibatch_size, shuffle=True):
-    """
-    Returns an iterator
-    Args:
-        data: (list of np array) data[0] = X, data[1] = y typically
-        minibatch_size: (int) 
-        shuffle: (bool)
-    Returns:
-        iterator: yields a list of np array of size < minibatch_size
-    """
-    data_size = len(data[0])
-    indices = np.arange(data_size)
-    if shuffle:
-        np.random.shuffle(indices)
-    for minibatch_start in np.arange(0, data_size, minibatch_size):
-        minibatch_indices = indices[minibatch_start:minibatch_start + minibatch_size]
-        yield [d[minibatch_indices] for d in data]
-
-
-def preprocess_data(data, preprocess, output_size, feature_extractor=lambda x: x):
-    """
-    Preprocess data with function preprocess
-    Args:
-        data: object on which we can iterate and yields X, y
-        preprocess: (function) np array -> np array
-        output_size: (int) for one hot encoding
-    Returns:
-        list of [x, y] where x, y are np arrays
-    """
-    x = np.array([feature_extractor(d[0]) for d in data])
-    y = np.array([min(d[1], output_size-1) for d in data])
-    x = preprocess(x)
-    one_hot = np.zeros((y.size, output_size))
-    one_hot[np.arange(y.size),y] = 1
-    return [x, one_hot]
-
-def split_data(data, dev=0.1, test=0.2):
-    """
-    Splits randomly data into train, dev and test set
-    Args:
-        data: [x, y] where x, y are np arrays
-        dev: (float) fraction of dev set 
-        test: (float) fraction of test set
-    Returns:
-        (train_examples, dev_set, test_set) where each element is the same
-                as data, a list of 2 np arrays [x, y]
-    """
-    data_size = len(data[0])
-    indices = np.arange(data_size)
-    np.random.shuffle(indices)
-    train_indices = indices[0:int(data_size*(1-dev-test))]
-    dev_indices = indices[int(data_size*(1-dev-test)):int(data_size*(1-test))]
-    test_indices = indices[int(data_size*(1-test)):]
-
-    train_examples = [data[0][train_indices], data[1][train_indices]]
-    dev_set = [data[0][dev_indices], data[1][dev_indices]]
-    test_set = [data[0][test_indices], data[1][test_indices]]
-
-    return train_examples, dev_set, test_set
-
-def default_preprocess(X):
-    """
-    Preprocess X by mean substracting and normalization
-    Args:
-        X: (np array) of shape (nsamples, nfeatures)
-    Returns:
-        X: (np array) (X - m) / sigma
-    """
-    X = mean_substraction(X)
-    X = normalization(X)
-    return X
-
-def mean_substraction(X):
-    """
-    Substracts mean to a sample X
-    Args:
-        X: np array of shape (nsamples, nfeatures)
-    Returns:
-        X - mean(X)
-    """
-
-    X -= np.mean(X, axis=0, keepdims=True)
-    return X
-
-def normalization(X):
-    """
-    Divides X by its standard deviation
-    Args:
-        X: np array of shape (nsamples, nfeatures)
-    Returns:
-        X / np.sqrt(np.var(X))
-    """
-    X /= np.sqrt(np.var(X, axis=0, keepdims=True))
-    return X
-
-def baseline(data, target=1):
-    """
-    Return fraction of data example with label equal to target
-    Args:
-        data: [x, y] where x, y are np arrays
-        traget: (int) the class target
-    """
-
-    return np.mean(np.argmax(data[1], axis=1) == 1)
 
 def dump_results(target, label, path):
     """
@@ -143,6 +41,26 @@ def dump_results(target, label, path):
         f.write("True Pred\n")
         for t, l in zip(target, label):
             f.write("{}    {}\n".format(t, l))
+
+def export_matrices(matrices, path="plots", vmin=-50, vmax=1000):
+    """
+    Saves an image of each matrix
+    Args:
+        matrices: dict of np arrays d[no of layer] = np array
+        path: string to directory
+        v: range of the plot colors
+    """
+    for i_, m_ in matrices.iteritems():
+        plt.figure()
+        m = copy.deepcopy(m_)
+        m[m == 0] = np.nan
+        plt.imshow(m, interpolation='nearest', cmap="bwr",  vmin=vmin, vmax=vmax)
+        plt.colorbar()
+        plt.grid(True)
+        plt.savefig(path+"/layer_{}.png".format(i_))
+        plt.close()
+        del m
+
 
 class Progbar(object):
     """

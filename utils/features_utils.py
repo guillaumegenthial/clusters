@@ -41,30 +41,114 @@ class LayerExtractor(object):
 
         return eta_id, phi_id
 
+class Extractor(object):
+    def __init__(self, layer_extractors, mode="e"):
+        self.layer_extractors = layer_extractors
+        self.preservation_ratio = {dep: {"cell": 0, "mat": 0} 
+                        for dep in layer_extractors.iterkeys()}
+        self.mode = mode
+        assert mode in {"e", "vol"}, "Unknown mode"
 
-def matrix_extraction(cells, layer_extractors, topo_eta, topo_phi):
+    def __call__(self, cells, topo_eta, topo_phi):
+        """
+        Returns matrices from cells
+        Args:
+            cells a dict of dict
+            layer_extractors: a dict of layer extractor, one for each layer
+            topo_eta: eta of cluster
+            topo_phi: phi of cluster
+        Returns
+            a dict of np arrays d[layer nb] = np array
+        """
+        layer_extractors = self.layer_extractors
+        matrices = dict()
+        for dep, extractor in layer_extractors.iteritems():
+            assert dep == extractor.dep, "Dep mismatch in {}".format(
+                                            self.__class__.__name__)
+            matrices[dep] = np.zeros([extractor.n_phi, extractor.n_eta])
+
+        for id_, cell_ in cells.iteritems():
+            dep = cell_["dep"]
+            # only add matrices for which we have an extractor
+            if dep in self.layer_extractors.keys():
+                self.preservation_ratio[dep]["cell"] += 1
+                eta_id, phi_id = layer_extractors[dep](cell_, topo_eta, topo_phi)
+                matrices[dep][phi_id, eta_id] += cell_[self.mode]
+
+        for dep, mat in matrices.iteritems():
+            self.preservation_ratio[dep]["mat"] += np.count_nonzero(mat)
+
+        return matrices
+
+    def get_preservation_ratio(self, dep):
+        """
+        Returns ratio of total number of cells seen versus
+        number of cells mapped in the matrices for dep dep
+        Args:
+            dep: (int) id of layer depth
+        """
+        mat_count = self.preservation_ratio[dep]["mat"]
+        cell_count = self.preservation_ratio[dep]["cell"]
+        if cell_count == 0:
+            return 0.0
+        else:
+            return  mat_count / float(cell_count)
+
+    def generate_report(self):
+        """
+        Print summary of counts and ratio to measure how good 
+        our mapping is
+        """
+        for dep, counts in self.preservation_ratio.iteritems():
+            ratio = self.get_preservation_ratio(dep)
+            print "Layer {}, cell_count {}, mat_count {}, ratio {}".format(
+                                  dep, counts["cell"], counts["mat"], ratio)
+
+
+def simple_features(d_, cell_weights=None):
     """
-    Returns matrices from cells
+    Returns a fixed size np array
     Args:
-        cells a dict of dict
-        layer_extractors: a dict of layer extractor, one for each layer
-        topo_eta: eta of cluster
-        topo_phi: phi of cluster
-    Returns
-        a dict of np arrays d[layer nb] = np array
+        d_ : dict {"topo_cells": ...,}
+    Returns:
+        f: np array [range_eta, ...]
     """
-    matrices = dict()
-    for dep, extractor in layer_extractors.iteritems():
-        assert dep == extractor.dep, "Dep mismatch in {}".format(
-                                        self.__class__.__name__)
-        matrices[dep] = np.zeros([extractor.n_phi, extractor.n_eta])
+    cells = d_["topo_cells"]
+    cells_eta = [d_["eta"] for d_ in cells.itervalues()]
+    cells_phi = [d_["phi"] for d_ in cells.itervalues()]
+    cells_dep = [d_["dep"] for d_ in cells.itervalues()]
+    cells_e = [d_["e"] for d_ in cells.itervalues()]
+    cells_vol = [d_["vol"] for d_ in cells.itervalues()]
+    r_eta = max(cells_eta) - min(cells_eta)
+    r_phi = max(cells_phi) - min(cells_phi)
+    r_dep = max(cells_dep) - min(cells_dep)
+    vol_tot = sum(cells_vol)
+    e_tot = sum([e * w for e, w in zip(cells_e, cell_weights)] if cell_weights is not None else cells_e)
 
-    for id_, cell_ in cells.iteritems():
-        dep = cell_["dep"]
-        eta_id, phi_id = layer_extractors[dep](cell_, topo_eta, topo_phi)
-        matrices[dep][phi_id, eta_id] += cell_["e"]
+    return np.array([r_eta, r_phi, r_dep, vol_tot, e_tot])
 
-    return matrices
+def cnn_simple_features(extractor):
+    """
+    Returns a (nphi, neta, nlayers) np array
+    Assumes that the layer extractors yield same dimension arrays
+    Args:
+        cells: dict {cell_uid: {"eta": eta, ...}, ...}
+        extractor: instance of Extractor
+    Returns:
+        f: (function)
+    """
+    def lambda_function(d_):
+        cells    = d_["topo_cells"]
+        topo_eta = d_["topo_eta"]
+        topo_phi = d_["topo_phi"]
+        matrices = extractor(cells, topo_eta, topo_phi)
+        result = []
+        for i_, m_ in matrices.iteritems():
+            result.append(m_)
+
+        return np.transpose(np.array(result), (1, 2, 0))
+
+    return lambda_function
 
 
-
+    
