@@ -2,18 +2,17 @@ import numpy as np
 import tensorflow as tf
 import pickle
 import time
-from utils.tf_utils import xavier_weight_init
+from utils.tf_utils import xavier_weight_init, conv2d, \
+                max_pool_2x2, weight_variable, bias_variable
 from utils.general_utils import  Progbar, dump_results, \
                 pickle_dump, pickle_load
 from utils.preprocess_utils import minibatches, default_preprocess, \
                 preprocess_data, split_data, baseline, one_hot, \
-                load_and_preprocess_data
+                load_and_preprocess_data, no_preprocess
 from utils.features_utils import Extractor, simple_features, \
                 cnn_simple_features
 from utils.dataset import Dataset
 import config
-
-
 
 
 # data
@@ -23,15 +22,18 @@ print 80 * "="
 
 print "Loading data"
 t0 = time.time()
-extractor = Extractor(config.layer_extractors)
+extractor = Extractor(config.layer_extractors, config.modes)
 n_layers = len(config.layer_extractors)
 n_phi = config.layer_extractors.values()[0].n_phi
 n_eta = config.layer_extractors.values()[0].n_eta
 features = cnn_simple_features(extractor)
 
 train_examples, dev_set, test_set = load_and_preprocess_data(config, 
-                        features, default_preprocess, one_hot)
-print train_examples[0].shape, dev_set[0].shape, test_set[0].shape
+                        features, no_preprocess, one_hot)
+print "Train set shape: {}".format(train_examples[0].shape)
+print "Dev   set shape: {}".format(dev_set[0].shape)
+print "Test  set shape: {}".format(test_set[0].shape)
+extractor.generate_report()
 dev_baseline  = baseline(dev_set)
 test_baseline = baseline(test_set)
 t1 = time.time()
@@ -39,30 +41,34 @@ print "- done. (time elapsed {:.2f})".format(t1 - t0)
 
 
 print "Building model"
-x = tf.placeholder(tf.float32, shape=[None, n_phi, n_eta, n_layers])
+x = tf.placeholder(tf.float32, shape=[None, n_phi, n_eta, n_layers*len(config.modes)])
 y = tf.placeholder(tf.int32, shape=[None, config.output_size])
+print n_phi, n_eta
 
-W = tf.get_variable('W', (5, 5, n_layers, 2), 
-                    initializer=xavier_weight_init())
 
-b = tf.get_variable('b', [2])
-x_conv = tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
-h  = tf.nn.relu(x_conv + b)
-# h_pool = max_pool_2x2(h)
+W_conv1 = weight_variable([5, 5, n_layers*len(config.modes), 10])
+b_conv1 = bias_variable([10])
+h_conv1  = tf.nn.relu(conv2d(x, W_conv1) + b_conv1)
+h_pool1 = max_pool_2x2(h_conv1)
+h_pool1_shape = [(n_phi + 1)/2, (n_eta + 1) /2]
 
-U = tf.get_variable('U', (n_phi * n_eta * 2, 10), 
-                    initializer=xavier_weight_init())
-b2 = tf.get_variable('b2', [10])
-h_pool_flat = tf.reshape(h, [-1, n_phi * n_eta * 2])
-h2 = tf.nn.relu(tf.matmul(h_pool_flat, U) + b2)
-h2_drop = tf.nn.dropout(h2, 0.5)
+W_conv2 = weight_variable([5, 5, 10, 5])
+b_conv2 = bias_variable([5])
+h_conv2  = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+h_pool2 = max_pool_2x2(h_conv2)
+h_pool2_shape = [(h_pool1_shape[0] + 1)/2, (h_pool1_shape[1] + 1)/2]
+h_pool2_flat = tf.reshape(h_pool2, [-1, h_pool2_shape[0]*h_pool2_shape[1]*5])
 
-V = tf.get_variable('V', (10, config.output_size), 
-                    initializer=xavier_weight_init())
-b3 = tf.get_variable('b3', (config.output_size), 
-                    initializer=xavier_weight_init())
-pred = tf.matmul(h2_drop, V) + b3
+W_fc1 = weight_variable([h_pool2_shape[0]*h_pool2_shape[1] * 5, 10])
+b_fc1 = bias_variable([10])
+h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
+h_fc1_drop = tf.nn.dropout(h_fc1, 0.5)
+
+W_fc2 = weight_variable([10, config.output_size])
+b_fc2 = bias_variable([config.output_size])
+
+pred = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 
 losses = tf.nn.softmax_cross_entropy_with_logits(pred, y)
 loss = tf.reduce_mean(losses)

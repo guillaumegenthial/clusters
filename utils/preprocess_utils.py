@@ -34,7 +34,8 @@ def minibatches(data, minibatch_size, shuffle=True):
         yield [d[minibatch_indices] for d in data]
 
 
-def preprocess_data(data, preprocess_x, preprocess_y, output_size, feature_extractor=lambda x: x):
+def preprocess_data(data, preprocess_x, preprocess_y, 
+            output_size, feature_extractor=lambda x: x):
     """
     Preprocess data with function preprocess
     Args:
@@ -73,14 +74,15 @@ def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
     Returns:
         train, dev and test set
     """
+    data_path = "{}_{}k.npy".format(config.export_data_path, 
+                                        config.max_events)
     if not config.load_from_export_data_path:
         data = Dataset(config.data_path, config.tree_name, 
-                       config.max_events, config.output_size, 
-                       config.data_verbosity)
+                       config.max_events, config.data_verbosity)
         data = data.get_data()
-        pickle_dump(data, config.export_data_path)
+        pickle_dump(data, data_path)
     else:
-        data = pickle_load(config.export_data_path)
+        data = pickle_load(data_path)
 
     data = preprocess_data(data, preprocess_x, preprocess_y, 
                            config.output_size, extractor)
@@ -124,6 +126,9 @@ def default_preprocess(X):
     """
     X = mean_substraction(X)
     X = normalization(X)
+    return X
+
+def no_preprocess(X):
     return X
 
 def mean_substraction(X):

@@ -42,12 +42,11 @@ class LayerExtractor(object):
         return eta_id, phi_id
 
 class Extractor(object):
-    def __init__(self, layer_extractors, mode="e"):
+    def __init__(self, layer_extractors, modes=["e", "vol"]):
         self.layer_extractors = layer_extractors
         self.preservation_ratio = {dep: {"cell": 0, "mat": 0} 
                         for dep in layer_extractors.iterkeys()}
-        self.mode = mode
-        assert mode in {"e", "vol"}, "Unknown mode"
+        self.modes = modes
 
     def __call__(self, cells, topo_eta, topo_phi):
         """
@@ -65,7 +64,9 @@ class Extractor(object):
         for dep, extractor in layer_extractors.iteritems():
             assert dep == extractor.dep, "Dep mismatch in {}".format(
                                             self.__class__.__name__)
-            matrices[dep] = np.zeros([extractor.n_phi, extractor.n_eta])
+            matrices[dep] = dict()
+            for mode in self.modes:
+                matrices[dep][mode] = np.zeros([extractor.n_phi, extractor.n_eta])
 
         for id_, cell_ in cells.iteritems():
             dep = cell_["dep"]
@@ -73,10 +74,11 @@ class Extractor(object):
             if dep in self.layer_extractors.keys():
                 self.preservation_ratio[dep]["cell"] += 1
                 eta_id, phi_id = layer_extractors[dep](cell_, topo_eta, topo_phi)
-                matrices[dep][phi_id, eta_id] += cell_[self.mode]
+                for mode in self.modes:
+                    matrices[dep][mode][phi_id, eta_id] += cell_[mode]
 
-        for dep, mat in matrices.iteritems():
-            self.preservation_ratio[dep]["mat"] += np.count_nonzero(mat)
+        for dep, modes_ in matrices.iteritems():
+            self.preservation_ratio[dep]["mat"] += np.count_nonzero(modes_["e"])
 
         return matrices
 
@@ -143,8 +145,9 @@ def cnn_simple_features(extractor):
         topo_phi = d_["topo_phi"]
         matrices = extractor(cells, topo_eta, topo_phi)
         result = []
-        for i_, m_ in matrices.iteritems():
-            result.append(m_)
+        for dep_, modes_ in matrices.iteritems():
+            for mode_, mat_ in modes_.iteritems(): 
+                result.append(mat_)
 
         return np.transpose(np.array(result), (1, 2, 0))
 

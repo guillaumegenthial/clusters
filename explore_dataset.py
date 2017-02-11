@@ -45,6 +45,7 @@ for i in range(min(mytree.GetEntries(), 10)):
     truth_parts = get_truth_parts(mytree)
     tracks      = get_tracks(mytree)
 
+
     max_barcode = max(truth_parts.keys())
     # print max_barcode
 
@@ -165,7 +166,7 @@ for i in range(min(mytree.GetEntries(), 10)):
             if topovec.DeltaR(partvec) < 1:
                 nparts_ += 1
 
-        features = simple_features(topo_cells)
+        features = simple_features({"topo_cells":topo_cells})
         r_eta = features[0]
         r_phi = features[1]
         plots.fill("r_eta", r_eta)

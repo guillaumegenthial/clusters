@@ -50,16 +50,17 @@ def export_matrices(matrices, path="plots", vmin=-50, vmax=1000):
         path: string to directory
         v: range of the plot colors
     """
-    for i_, m_ in matrices.iteritems():
-        plt.figure()
-        m = copy.deepcopy(m_)
-        m[m == 0] = np.nan
-        plt.imshow(m, interpolation='nearest', cmap="bwr",  vmin=vmin, vmax=vmax)
-        plt.colorbar()
-        plt.grid(True)
-        plt.savefig(path+"/layer_{}.png".format(i_))
-        plt.close()
-        del m
+    for i_, modes_ in matrices.iteritems():
+        for mode_, m_ in modes_.iteritems():
+            plt.figure()
+            m = copy.deepcopy(m_)
+            m[m == 0] = np.nan
+            plt.imshow(m, interpolation='nearest', cmap="bwr",  vmin=vmin, vmax=vmax)
+            plt.colorbar()
+            plt.grid(True)
+            plt.savefig(path+"/layer_{}.png".format(i_))
+            plt.close()
+            del m
 
 
 class Progbar(object):

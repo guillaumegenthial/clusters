@@ -11,12 +11,11 @@ from general_utils import get_my_print
 
 class Dataset(object):
     def __init__(self, path="data/ntuple_v3_2000k.root", tree="SimpleJet", 
-                 max_iter=10, max_nparts=10, verbose=0, max_eta=1, min_energy=20):
+                 max_iter=10, verbose=0, max_eta=1, min_energy=20):
         self.path = path
         self.myfile = ROOT.TFile(path)
         self.mytree = self.myfile.Get(tree)
         self.max_iter = max_iter
-        self.max_nparts = max_nparts
         self.my_print = get_my_print(verbose)
         self.length = None
         self.max_eta = max_eta
@@ -39,7 +38,7 @@ class Dataset(object):
             if (i%100==0):
                 self.my_print("Entry {}, NJets {}".format(i, mytree.NJets), 1)
 
-            leadjets     = get_leadjets(mytree, min_energy=self.min_energy, 
+            leadjets    = get_leadjets(mytree, min_energy=self.min_energy, 
                                         max_eta=self.max_eta)
             cells       = get_cells(mytree) # sloooow
             truth_parts = get_truth_parts(mytree) # fast
@@ -56,7 +55,6 @@ class Dataset(object):
                 nparts = nb_of_truth_parts(mytree, j)
 
                 topo_cells = map_cells(cells, cell_ids)
-                nparts = nparts if nparts < self.max_nparts else (self.max_nparts-1)
 
                 yield {"topo_eta": topo_eta, "topo_phi": topo_phi, 
                        "topo_cells": topo_cells, "nparts": nparts}
