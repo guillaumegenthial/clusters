@@ -2,13 +2,14 @@ import numpy as np
 import tensorflow as tf
 import time
 import os
+from shutil import copyfile
 from datetime import datetime
 from utils.tf_utils import xavier_weight_init, conv2d, \
                 max_pool_2x2, weight_variable, bias_variable
-from utils.general_utils import  Progbar, dump_results, export_matrices
+from utils.general_utils import  Progbar, dump_results, export_matrices, \
+                outputConfusionMatrix
 from utils.preprocess_utils import minibatches, baseline
 from utils.features_utils import Extractor
-import config
 
 
 class Model(object):
@@ -18,6 +19,7 @@ class Model(object):
             self.config.output_path = "results/{:%Y%m%d_%H%M%S}/".format(datetime.now())
         self.config.model_output = self.config.output_path + "model.weights/"
         self.config.eval_output = self.config.output_path + "results.txt"
+        self.config.conf_matrix = self.config.output_path + "confusion_matrix.png"
         self.config.plot_output = self.config.output_path + "plots/"
         self.config.log_output = self.config.output_path + "log"
 
@@ -102,7 +104,7 @@ class Model(object):
             acc: accuracy on dev set
         """
         print "Epoch {:} out of {:}".format(epoch + 1, self.config.n_epochs)
-        prog = Progbar(target=1 + len(train_examples[0]) / config.batch_size)
+        prog = Progbar(target=1 + len(train_examples[0]) / self.config.batch_size)
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, 
                                                 self.config.batch_size)):
             _, train_loss = sess.run([self.train_op, self.loss], 
@@ -126,6 +128,8 @@ class Model(object):
         best_acc = 0
         dev_baseline = baseline(dev_set)
         saver = tf.train.Saver()
+
+        copyfile(self.config.config_file, self.config.output_path+"config.py")
         with tf.Session() as sess:
             sess.run(self.init)
             print 80 * "="
@@ -146,7 +150,6 @@ class Model(object):
         print "TESTING"
         print 80 * "="
         print "Final evaluation on test set"
-
         test_baseline = baseline(test_set)
         saver = tf.train.Saver()
         with tf.Session() as sess:
@@ -170,7 +173,8 @@ class Model(object):
         """
         Export result
         """
-        dump_results(tar, lab, self.config.eval_output)
+        # dump_results(tar, lab, self.config.eval_output)
+        outputConfusionMatrix(tar, lab, self.config.output_size, self.config.conf_matrix)
         if test_raw is not None:
             extractor = Extractor(self.config.layer_extractors)
             tar_lab_seen = set()

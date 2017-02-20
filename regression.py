@@ -20,8 +20,8 @@ class Regression(Model):
         """
         Defines self.pred
         """
-        W = weight_variable('W', [self.config.input_size, self.config.hidden_size])
-        b = bias_variable('b', [self.config.hidden_size])
+        W = weight_variable('W', [self.config.input_size, self.config.output_size])
+        b = bias_variable('b', [self.config.output_size])
         self.pred = tf.matmul(self.x, W) + b
 
     def add_loss_op(self):
