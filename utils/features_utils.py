@@ -164,10 +164,10 @@ def simple_features(tops=2, mode=1):
             result =  np.array([topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot] 
                             + d_e + dR)
         elif mode == 2:
-            result = np.array([topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot] 
+            result = np.array([topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, pt_tot] 
                             + d_pt + dR_pt)
         elif mode == 3:
-            result = np.array([topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot] 
+            result = np.array([topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot, pt_tot] 
                             + d_e + dR + d_pt + dR_pt)
         elif mode == 4:
             result = np.array([r_eta, r_phi, vol_tot, e_tot])

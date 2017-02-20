@@ -20,16 +20,15 @@ modes = ["e", "vol"]
 
 # features
 tops = 10
-feature_mode = 1
-input_size = 7 + tops
+feature_mode = 3
 output_size = 3
+layer_extractors = dict()
+for l in range(24):
+    layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
 
 # model
 output_path = None
 dropout = 0.5
 lr = 0.001
-n_epochs = 5
+n_epochs = 20
 
-layer_extractors = dict()
-for l in range(24):
-    layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)

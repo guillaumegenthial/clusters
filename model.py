@@ -129,6 +129,7 @@ class Model(object):
         best_acc = 0
         dev_baseline = baseline(dev_set)
         saver = tf.train.Saver()
+        self.export_config()
         with tf.Session() as sess:
             sess.run(self.init)
             print 80 * "="
@@ -136,10 +137,11 @@ class Model(object):
             print 80 * "="
 
             for epoch in range(self.config.n_epochs):
-               acc = self.run_epoch(sess, epoch, train_examples, dev_set, dev_baseline)
-               if acc > best_acc:
-                print "- new best score! saving model in ", self.config.model_output
-                self.save(saver, sess, self.config.model_output)
+                acc = self.run_epoch(sess, epoch, train_examples, dev_set, dev_baseline)
+                if acc > best_acc:
+                    print "- new best score! saving model in ", self.config.model_output
+                    best_acc = acc
+                    self.save(saver, sess, self.config.model_output)
 
     def evaluate(self, test_set, test_raw=None):
         """
@@ -167,7 +169,7 @@ class Model(object):
         copyfile(self.config.config_file, self.config.config_output)
 
     def export_result(self, tar, lab, data_raw, extractor):
-        path = self.config.plot_output+ "tar_{}_label_{}/".format(tar, lab)
+        path = self.config.plot_output+ "true_{}_pred{}/".format(tar, lab)
         if not os.path.exists(path):
             os.makedirs(path)
         matrices = extractor(data_raw["topo_cells"], data_raw["topo_eta"], 
@@ -187,7 +189,7 @@ class Model(object):
                 if (t, l) not in tar_lab_seen:
                     tar_lab_seen.add((t, l))
                     self.export_result(t, l, d_, extractor)
-                    print "- extracted layers for target {} label {} in {}".format(
+                    print "- extracted layers for true label {}, pred {} in {}".format(
                                                 t, l, self.config.plot_output)
 
 
