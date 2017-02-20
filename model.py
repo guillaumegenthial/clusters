@@ -19,7 +19,8 @@ class Model(object):
             self.config.output_path = "results/{:%Y%m%d_%H%M%S}/".format(datetime.now())
         self.config.model_output = self.config.output_path + "model.weights/"
         self.config.eval_output = self.config.output_path + "results.txt"
-        self.config.conf_matrix = self.config.output_path + "confusion_matrix.png"
+        self.config.confmatrix_output = self.config.output_path + "confusion_matrix.png"
+        self.config.config_output = self.config.output_path + "config.py"
         self.config.plot_output = self.config.output_path + "plots/"
         self.config.log_output = self.config.output_path + "log"
 
@@ -128,8 +129,6 @@ class Model(object):
         best_acc = 0
         dev_baseline = baseline(dev_set)
         saver = tf.train.Saver()
-
-        copyfile(self.config.config_file, self.config.output_path+"config.py")
         with tf.Session() as sess:
             sess.run(self.init)
             print 80 * "="
@@ -161,6 +160,12 @@ class Model(object):
             self.export_results(tar, lab, test_raw)
 
 
+    def export_config(self):
+        if not os.path.exists(self.config.output_path):
+            os.makedirs(self.config.output_path)
+
+        copyfile(self.config.config_file, self.config.config_output)
+
     def export_result(self, tar, lab, data_raw, extractor):
         path = self.config.plot_output+ "tar_{}_label_{}/".format(tar, lab)
         if not os.path.exists(path):
@@ -174,7 +179,7 @@ class Model(object):
         Export result
         """
         # dump_results(tar, lab, self.config.eval_output)
-        outputConfusionMatrix(tar, lab, self.config.output_size, self.config.conf_matrix)
+        outputConfusionMatrix(tar, lab, self.config.output_size, self.config.confmatrix_output)
         if test_raw is not None:
             extractor = Extractor(self.config.layer_extractors)
             tar_lab_seen = set()
