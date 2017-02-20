@@ -11,7 +11,6 @@ def baseline(data, target=1):
         data: [x, y] where x, y are np arrays
         traget: (int) the class target
     """
-
     return np.mean(np.argmax(data[1], axis=1) == 1)
 
 def minibatches(data, minibatch_size, shuffle=True):
@@ -33,32 +32,73 @@ def minibatches(data, minibatch_size, shuffle=True):
         yield [d[minibatch_indices] for d in data]
 
 
-def preprocess_data(data, preprocess_x, preprocess_y, 
-            output_size, feature_extractor=lambda x: x):
+def load_data(config):
+    data_path = "{}_{}k.npy".format(config.export_data_path, 
+                                        config.max_events)
+    if not config.load_from_export_data_path:
+        from dataset import Dataset
+        data = Dataset(path=config.data_path, tree=config.tree_name, 
+                       max_iter=config.max_events, verbose=config.data_verbosity,
+                       max_eta=config.max_eta, min_energy=config.min_energy)
+
+        data = data.get_data()
+        pickle_dump(data, data_path)
+    else:
+        data = pickle_load(data_path)
+
+    return data
+
+
+def split_data(data, dev=0.1, test=0.2):
     """
-    Preprocess data with function preprocess
+    Splits randomly data into train, dev and test set
     Args:
-        data: object on which we can iterate and yields X, y
-        preprocess_x: (function) np array -> np array
-        preprocess_y: (function) np array -> np 
-        output_size: (int) for one hot encoding
-        feature_extractor: (function) data -> np array
+        data: [x, y] where x, y are np arrays
+        dev: (float) fraction of dev set 
+        test: (float) fraction of test set
     Returns:
-        list of [x, y] where x, y are np arrays
+        (train_examples, dev_set, test_set) where each element is the same
+                as data, a list of 2 np arrays [x, y]
+    """
+    data_size = len(data)
+    indices = np.arange(data_size)
+    np.random.shuffle(indices)
+
+    train_indices = indices[0:int(data_size*(1-dev-test))]
+    dev_indices = indices[int(data_size*(1-dev-test)):int(data_size*(1-test))]
+    test_indices = indices[int(data_size*(1-test)):]
+
+    train_raw = [data[i] for i in train_indices]
+    dev_raw = [data[i] for i in dev_indices]
+    test_raw = [data[i] for i in test_indices]
+
+    return train_raw, dev_raw, test_raw
+
+
+def extract_data(data, feature_extractor=lambda x: x):
+    """
+    Extract data with feature_extractor
+    Args:
+        data: object on which we can iterate 
+    Returns:
+        [x, y] where x, y are np arrays
     """
     x = np.array([feature_extractor(d) for d in data])
-    y = np.array([min(d["nparts"], output_size-1) for d in data])
-    x = preprocess_x(x)
-    y = preprocess_y(y, output_size)
+    y = np.array([d["nparts"] for d in data])
     return [x, y]
 
-def one_hot(y, output_size):
+def preprocess_data(data, preprocess_x, preprocess_y):
     """
-    Takes a label y an return a one-hot vector
+    Preprocess data
+    Args:
+        data: [x, y] where x and y are np arrays
+    Returns:
+        [x, y]
     """
-    one_hot = np.zeros((y.size, output_size))
-    one_hot[np.arange(y.size),y] = 1
-    return one_hot
+    x = preprocess_x(data[0])
+    y = preprocess_y(data[1])
+    return [x, y]
+
 
 def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
     """
@@ -80,23 +120,16 @@ def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
     print "Loading data"
     t0 = time.time()
 
-    data_path = "{}_{}k.npy".format(config.export_data_path, 
-                                        config.max_events)
-    if not config.load_from_export_data_path:
-        from dataset import Dataset
-        data = Dataset(path=config.data_path, tree=config.tree_name, 
-                       max_iter=config.max_events, verbose=config.data_verbosity,
-                       max_eta=config.max_eta, min_energy=config.min_energy)
+    data = load_data(config)
+    train_raw, dev_raw, test_raw = split_data(data, config.dev_size, config.test_size)
 
-        data = data.get_data()
-        pickle_dump(data, data_path)
-    else:
-        data = pickle_load(data_path)
+    train_examples = extract_data(train_raw, extractor)
+    dev_set = extract_data(dev_raw, extractor)
+    test_set = extract_data(test_raw, extractor)
 
-    data = preprocess_data(data, preprocess_x, preprocess_y, 
-                           config.output_size, extractor)
-    train_examples, dev_set, test_set = split_data(data, config.dev_size,
-                                                   config.test_size)
+    train_examples = preprocess_data(train_examples, preprocess_x, preprocess_y)
+    dev_set = preprocess_data(dev_set, preprocess_x, preprocess_y)
+    test_set = preprocess_data(test_set, preprocess_x, preprocess_y)
 
     print "    Train set shape: {}".format(train_examples[0].shape)
     print "    Dev   set shape: {}".format(dev_set[0].shape)
@@ -105,32 +138,19 @@ def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
     t1 = time.time()
     print "- done. (time elapsed {:.2f})".format(t1 - t0)
     
-    return train_examples, dev_set, test_set
+    return train_examples, dev_set, test_set, test_raw
 
 
-def split_data(data, dev=0.1, test=0.2):
+def one_hot(output_size):
     """
-    Splits randomly data into train, dev and test set
-    Args:
-        data: [x, y] where x, y are np arrays
-        dev: (float) fraction of dev set 
-        test: (float) fraction of test set
-    Returns:
-        (train_examples, dev_set, test_set) where each element is the same
-                as data, a list of 2 np arrays [x, y]
+    Takes a label y an return a one-hot vector
     """
-    data_size = len(data[0])
-    indices = np.arange(data_size)
-    np.random.shuffle(indices)
-    train_indices = indices[0:int(data_size*(1-dev-test))]
-    dev_indices = indices[int(data_size*(1-dev-test)):int(data_size*(1-test))]
-    test_indices = indices[int(data_size*(1-test)):]
-
-    train_examples = [data[0][train_indices], data[1][train_indices]]
-    dev_set = [data[0][dev_indices], data[1][dev_indices]]
-    test_set = [data[0][test_indices], data[1][test_indices]]
-
-    return train_examples, dev_set, test_set
+    def f(y):
+        y = np.asarray([min(y_, output_size-1) for y_ in y])
+        one_hot = np.zeros((y.size, output_size))
+        one_hot[np.arange(y.size), y] = 1
+        return one_hot
+    return f
 
 def default_preprocess(X):
     """
@@ -140,7 +160,7 @@ def default_preprocess(X):
     Returns:
         X: (np array) (X - m) / sigma
     """
-    # X = mean_substraction(X)
+    X = mean_substraction(X)
     X = normalization(X)
     return X
 
@@ -149,6 +169,12 @@ def no_preprocess(X):
 
 def scale_preprocess(scale):
     return lambda X: X/float(scale)
+
+def mean(X):
+    return np.mean(X, axis=0, keepdims=True)
+
+def sigma(X):
+    return np.sqrt(np.var(X, axis=0, keepdims=True))
 
 def mean_substraction(X):
     """
@@ -159,7 +185,7 @@ def mean_substraction(X):
         X - mean(X)
     """
 
-    X -= np.mean(X, axis=0, keepdims=True)
+    X -= mean(X)
     return X
 
 def normalization(X):
@@ -170,5 +196,5 @@ def normalization(X):
     Returns:
         X / np.sqrt(np.var(X))
     """
-    X /= np.sqrt(np.var(X, axis=0, keepdims=True))
+    X /= sigma(X)
     return X

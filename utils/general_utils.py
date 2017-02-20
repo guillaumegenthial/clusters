@@ -42,7 +42,7 @@ def dump_results(target, label, path):
         for t, l in zip(target, label):
             f.write("{}    {}\n".format(t, l))
 
-def export_matrices(matrices, path="plots", vmin=-50, vmax=1000):
+def export_matrices(matrices, path="plots/", vmin=-50, vmax=1000):
     """
     Saves an image of each matrix
     Args:
@@ -52,15 +52,16 @@ def export_matrices(matrices, path="plots", vmin=-50, vmax=1000):
     """
     for i_, modes_ in matrices.iteritems():
         for mode_, m_ in modes_.iteritems():
-            plt.figure()
-            m = copy.deepcopy(m_)
-            m[m == 0] = np.nan
-            plt.imshow(m, interpolation='nearest', cmap="bwr",  vmin=vmin, vmax=vmax)
-            plt.colorbar()
-            plt.grid(True)
-            plt.savefig(path+"/layer_{}.png".format(i_))
-            plt.close()
-            del m
+            if np.sum(m_) != 0:
+                plt.figure()
+                m = copy.deepcopy(m_)
+                m[m == 0] = np.nan
+                plt.imshow(m, interpolation='nearest', cmap="bwr",  vmin=vmin, vmax=vmax)
+                plt.colorbar()
+                plt.grid(True)
+                plt.savefig(path+"layer_{}.png".format(i_))
+                plt.close()
+                del m
 
 
 class Progbar(object):
