@@ -41,10 +41,10 @@ def max_pool_2x2(x):
   return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
                         strides=[1, 2, 2, 1], padding='SAME')
 
-def weight_variable(shape):
-  initial = tf.truncated_normal(shape, stddev=0.1)
-  return tf.Variable(initial)
+def weight_variable(name, shape, initializer=xavier_weight_init()):
+  initial = initializer(shape)
+  return tf.Variable(initial, name=name)
 
-def bias_variable(shape):
+def bias_variable(name, shape):
   initial = tf.constant(0.1, shape=shape)
-  return tf.Variable(initial)
+  return tf.Variable(initial, name=name)

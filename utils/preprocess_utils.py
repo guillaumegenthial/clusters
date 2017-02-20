@@ -2,7 +2,6 @@ import sys
 import time
 import numpy as np
 import pickle
-from dataset import Dataset
 from general_utils import pickle_dump, pickle_load
 
 def baseline(data, target=1):
@@ -74,11 +73,21 @@ def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
     Returns:
         train, dev and test set
     """
+    print 80 * "="
+    print "INITIALIZING"
+    print 80 * "="
+
+    print "Loading data"
+    t0 = time.time()
+
     data_path = "{}_{}k.npy".format(config.export_data_path, 
                                         config.max_events)
     if not config.load_from_export_data_path:
-        data = Dataset(config.data_path, config.tree_name, 
-                       config.max_events, config.data_verbosity)
+        from dataset import Dataset
+        data = Dataset(path=config.data_path, tree=config.tree_name, 
+                       max_iter=config.max_events, verbose=config.data_verbosity,
+                       max_eta=config.max_eta, min_energy=config.min_energy)
+
         data = data.get_data()
         pickle_dump(data, data_path)
     else:
@@ -89,6 +98,13 @@ def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
     train_examples, dev_set, test_set = split_data(data, config.dev_size,
                                                    config.test_size)
 
+    print "    Train set shape: {}".format(train_examples[0].shape)
+    print "    Dev   set shape: {}".format(dev_set[0].shape)
+    print "    Test  set shape: {}".format(test_set[0].shape)
+
+    t1 = time.time()
+    print "- done. (time elapsed {:.2f})".format(t1 - t0)
+    
     return train_examples, dev_set, test_set
 
 
@@ -124,12 +140,15 @@ def default_preprocess(X):
     Returns:
         X: (np array) (X - m) / sigma
     """
-    X = mean_substraction(X)
+    # X = mean_substraction(X)
     X = normalization(X)
     return X
 
 def no_preprocess(X):
     return X
+
+def scale_preprocess(scale):
+    return lambda X: X/float(scale)
 
 def mean_substraction(X):
     """

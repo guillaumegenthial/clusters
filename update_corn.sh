@@ -1,2 +1,2 @@
 #!/bin/bash
-rsync -rtv . genthial@corn.stanford.edu:~/private/clusters
+rsync -rtv --exclude 'data/ntuple_v3_2000k.npy' . genthial@corn.stanford.edu:~/private/clusters
