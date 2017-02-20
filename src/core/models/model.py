@@ -152,6 +152,7 @@ class Model(object):
             logger.info(80 * "=")
             logger.info("TRAINING")
             logger.info(80 * "=")
+            logger.info("- reg: {:.6f}, lr: {:.6f}".format(self.config.reg, self.config.lr))
 
             for epoch in range(self.config.n_epochs):
                 acc = self.run_epoch(sess, epoch, train_examples, dev_set, dev_baseline)
@@ -160,7 +161,7 @@ class Model(object):
                     best_acc = acc
                     self.save(saver, sess, self.config.model_output)
 
-    def evaluate(self, test_set, test_raw=None):
+    def evaluate(self, test_set, export=True, test_raw=None):
         """
         Reload weights and test on test set
         """
@@ -176,12 +177,56 @@ class Model(object):
             acc, tar, lab = sess.run([self.accuracy, self.target, self.label], 
                             feed_dict=self.get_feed_dict(test_set[0], test_set[1]))
             logger.info("- test acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, test_baseline * 100))
-            self.export_results(tar, lab, test_raw)
+            if export and test_raw is not None:
+                self.export_results(tar, lab, test_raw)
+
+        return acc
+
+    def find_best_reg_value(self, reg_values, train_examples, dev_set, test_set):
+        """
+        Train model for different values of reg
+        Args:
+            reg_values: iterable
+            ...
+        Returns:
+            list of tuples [(reg_value, score), ...]
+        """
+        result = []
+        for reg in reg_values:
+            self.config.reg = reg
+            self.train(train_examples, dev_set)
+            acc = self.evaluate(test_set)
+            result += [(reg, acc)]
+
+        self.get_reg_summary(result)
+        return result
+
+    def get_reg_summary(self, res):
+        """
+        Get reg summary
+        Args:
+            res: list of tuples [(reg_value, score), ...]
+        """
+        logger.info("="*80)
+        logger.info("REG-SUMMARY")
+        logger.info("="*80)
+        for (reg, acc) in res:
+            logger.info("Reg: {:.6f} Acc: {:.2f}".format(reg, acc*100))
+
+        reg, acc = max(res, key=lambda (a, b): b)
+        logger.info("- best reg value {:.6f} acc {:.2f}".format(reg, acc*100))
+
 
     def export_config(self):
+        """
+        Copies config file to outputpath
+        """
         copyfile(self.config.config_file, self.config.config_output)
 
     def export_result(self, tar, lab, data_raw, extractor):
+        """
+        Export matrices of input
+        """
         path = self.config.plot_output+ "true_{}_pred{}/".format(tar, lab)
         check_dir(path)
         matrices = extractor(data_raw["topo_cells"], data_raw["topo_eta"], 
@@ -190,9 +235,9 @@ class Model(object):
 
     def export_results(self, tar, lab, test_raw=None):
         """
-        Export result
+        Export confusion matrix
+        Export matrices for all pairs (tar, lab)
         """
-        # dump_results(tar, lab, self.config.eval_output)
         outputConfusionMatrix(tar, lab, self.config.output_size, self.config.confmatrix_output)
         if test_raw is not None:
             extractor = Extractor(self.config.layer_extractors)

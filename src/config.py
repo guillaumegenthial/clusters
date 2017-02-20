@@ -7,7 +7,7 @@ config_file = "config.py"
 # data
 data_path = "data/ntuple_v3_2000k.root"
 data_verbosity = 2
-max_events = 10
+max_events = 100
 export_data_path = "data/ntuple_v3"
 load_from_export_data_path = True # speedup x2000
 tree_name = "SimpleJet"
