@@ -140,6 +140,19 @@ def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
     
     return train_examples, dev_set, test_set, test_raw
 
+def export_data(data, modes, path):
+    """
+    writes features to file
+    Args:
+        data [x, y] where x and y are np arrays
+    """
+    with open(path, "w") as f:
+        f.write(", ".join(modes) + ", " + "nparts")
+        f.write("\n")
+        for x, y in zip(data[0], data[1]):
+            feat = ", ".join(map(str, x))
+            feat += ", " + str(y) + "\n"
+            f.write(feat)
 
 def one_hot(output_size):
     """

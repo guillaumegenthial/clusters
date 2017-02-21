@@ -150,8 +150,6 @@ def simple_features(tops=2, mode=1):
         d_pt = list(zip(*top_pt)[2]) + [0]*(tops - len(top_pt))
         dR_pt = map_deltaR(d_eta, d_phi)
 
-        
-
         r_eta = max(cells_eta) - min(cells_eta)
         r_phi = max(cells_phi) - min(cells_phi)
         r_dep = max(cells_dep) - min(cells_dep)
@@ -172,12 +170,18 @@ def simple_features(tops=2, mode=1):
         elif mode == 4:
             result = np.array([r_eta, r_phi, vol_tot, e_tot])
         else:
-            print "Unknown mode for simple_features"
+            print "Unknown mode {} for simple_features".format(mode)
             raise NotImplementedError
 
         return result
 
-    return f
+    feat = ["topo_eta", "topo_phi", "r_eta", "r_phi", "r_dep", "vol_tot", "e_tot", "pt_tot"]
+    feat += ["d_e_{}".format(i) for i in range(tops)]
+    feat += ["d_R_{}".format(i) for i in range(tops)]
+    feat += ["d_pt_{}".format(i) for i in range(tops)]
+    feat += ["dR_pt_{}".format(i) for i in range(tops)]
+
+    return f, feat
 
 def cnn_simple_features(extractor):
     """

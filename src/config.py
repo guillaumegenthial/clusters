@@ -19,7 +19,7 @@ min_energy = 20
 modes = ["e", "vol"]
 
 # features
-tops = 10
+tops = 2
 feature_mode = 3
 output_size = 3
 layer_extractors = dict()

@@ -3,3 +3,7 @@
 data/
 plots/
 results/
+explore/*.txt
+explore/*.pdf
+explore/*.RData
+explore/*.RHistory
