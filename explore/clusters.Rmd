@@ -1,0 +1,30 @@
+---
+title: "Clusters Features Stats"
+author: "Guillaume Genthial"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/Documents/Stanford/Courses/PHY (Computer Vision for Particle Physics)/Code/explore/")
+library(ggplot2)
+library(MASS)
+```
+
+```{r}
+features <- read.csv("features.txt", header=TRUE)
+features$nparts <- factor(features$nparts)
+summary(features)
+names(features)
+plot(features$nparts, main="Distribution of npart")
+hist(features$e_tot, main="Dist of e tot", xlab="e tot")
+hist(features$pt_tot, main="Dist of pt tot", xlab="pt tot")
+plot(features$e_tot, features$pt_tot, xlab="e tot", ylab="pt tot")
+```
+
+```{r}
+for (n in names(features)){
+  plot(features[[n]], features[["nparts"]], main="Feature plot", xlab=n, ylab="nparts")
+}
+```
+
