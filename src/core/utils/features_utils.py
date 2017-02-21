@@ -121,6 +121,7 @@ def simple_features(tops=2, mode=1):
         topo_phi = d_["topo_phi"]
 
         cells = d_["topo_cells"]
+        ncells = len(cells)
         cells_eta = [d_["eta"] for d_ in cells.itervalues()]
         cells_phi = [d_["phi"] for d_ in cells.itervalues()]
         cells_dep = [d_["dep"] for d_ in cells.itervalues()]
@@ -159,13 +160,13 @@ def simple_features(tops=2, mode=1):
         pt_tot = sum([pt * w for pt, w in zip(cells_pt, cell_weights)] if cell_weights is not None else cells_pt)
 
         if mode == 1:
-            result =  np.array([topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot] 
+            result =  np.array([ncells, topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot] 
                             + d_e + dR)
         elif mode == 2:
-            result = np.array([topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, pt_tot] 
+            result = np.array([ncells, topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, pt_tot] 
                             + d_pt + dR_pt)
         elif mode == 3:
-            result = np.array([topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot, pt_tot] 
+            result = np.array([ncells, topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot, pt_tot] 
                             + d_e + dR + d_pt + dR_pt)
         elif mode == 4:
             result = np.array([r_eta, r_phi, vol_tot, e_tot])
@@ -175,7 +176,7 @@ def simple_features(tops=2, mode=1):
 
         return result
 
-    feat = ["topo_eta", "topo_phi", "r_eta", "r_phi", "r_dep", "vol_tot", "e_tot", "pt_tot"]
+    feat = ["ncells", "topo_eta", "topo_phi", "r_eta", "r_phi", "r_dep", "vol_tot", "e_tot", "pt_tot"]
     feat += ["d_e_{}".format(i) for i in range(tops)]
     feat += ["d_R_{}".format(i) for i in range(tops)]
     feat += ["d_pt_{}".format(i) for i in range(tops)]

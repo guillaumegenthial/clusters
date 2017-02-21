@@ -3,6 +3,7 @@ from core.utils.features_utils import LayerExtractor
 # general
 exp_name = "plots_2k"
 config_file = "config.py"
+train_mode = "train"
 
 # data
 data_path = "data/ntuple_v3_2000k.root"
@@ -28,8 +29,10 @@ for l in range(24):
 
 # model
 output_path = None
-dropout = 0.5
+dropout = 1
 lr = 0.001
-reg = 0.001
+reg = 0.01
 n_epochs = 20
+# hidden_sizes = [20, 40, 60, 60, 40, 20, 10]
+hidden_sizes = [100, 20]
 

@@ -209,5 +209,6 @@ def normalization(X):
     Returns:
         X / np.sqrt(np.var(X))
     """
-    X /= sigma(X)
+    eps = 10^(-6)
+    X /= (sigma(X) + eps)
     return X

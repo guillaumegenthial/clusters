@@ -40,11 +40,12 @@ class Model(object):
         """
         raise NotImplementedError
 
-    def get_feed_dict(self, x, y=None):
+    def get_feed_dict(self, x, d, y=None):
         """
         Return feed dict
         """
-        feed = {self.x: x}
+        feed = {self.x: x,
+                self.dropout: d}
         if y is not None:
             feed[self.y] = y
         return feed
@@ -59,7 +60,9 @@ class Model(object):
         """
         Defines self.loss
         """
-        raise NotImplementedError
+        losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.pred, labels=self.y)
+        self.loss = tf.reduce_mean(losses) + self.l2_loss() * self.config.reg
+
 
     def l2_loss(self):
         variables = tf.trainable_variables()
@@ -125,12 +128,14 @@ class Model(object):
         prog = Progbar(target=1 + len(train_examples[0]) / self.config.batch_size)
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, 
                                                 self.config.batch_size)):
-            _, train_loss = sess.run([self.train_op, self.loss], 
-                                    feed_dict=self.get_feed_dict(train_x, train_y))
+
+            fd = self.get_feed_dict(train_x, self.config.dropout, train_y)
+            _, train_loss = sess.run([self.train_op, self.loss], feed_dict=fd)
             prog.update(i + 1, [("train loss", train_loss)])
 
         logger.info("Evaluating on dev set")
-        acc, = sess.run([self.accuracy], feed_dict=self.get_feed_dict(dev_set[0], dev_set[1]))
+        fd = self.get_feed_dict(dev_set[0], self.config.dropout, dev_set[1])
+        acc, = sess.run([self.accuracy], feed_dict=fd)
         logger.info("- dev acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, 
                                                  dev_baseline * 100.0))
         return acc
@@ -161,7 +166,7 @@ class Model(object):
                     best_acc = acc
                     self.save(saver, sess, self.config.model_output)
 
-    def evaluate(self, test_set, export=True, test_raw=None):
+    def evaluate(self, test_set, test_raw=None):
         """
         Reload weights and test on test set
         """
@@ -174,10 +179,11 @@ class Model(object):
         with tf.Session() as sess:
             sess.run(self.init)
             saver.restore(sess, self.config.model_output)
-            acc, tar, lab = sess.run([self.accuracy, self.target, self.label], 
-                            feed_dict=self.get_feed_dict(test_set[0], test_set[1]))
+            fd = self.get_feed_dict(test_set[0], self.config.dropout, test_set[1])
+            acc, tar, lab = sess.run([self.accuracy, self.target, self.label], feed_dict=fd)
             logger.info("- test acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, test_baseline * 100))
-            if export and test_raw is not None:
+            outputConfusionMatrix(tar, lab, self.config.output_size, self.config.confmatrix_output)
+            if test_raw is not None:
                 self.export_results(tar, lab, test_raw)
 
         return acc
@@ -238,7 +244,6 @@ class Model(object):
         Export confusion matrix
         Export matrices for all pairs (tar, lab)
         """
-        outputConfusionMatrix(tar, lab, self.config.output_size, self.config.confmatrix_output)
         if test_raw is not None:
             extractor = Extractor(self.config.layer_extractors)
             tar_lab_seen = set()
