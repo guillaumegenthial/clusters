@@ -8,39 +8,45 @@ def baseline(data, target=1):
     """
     Return fraction of data example with label equal to target
     Args:
-        data: [x, y] where x, y are np arrays
+        data: list of (x, y)
         traget: (int) the class target
     """
-    return np.mean(np.argmax(data[1], axis=1) == 1)
+    y = zip(*data)[1]
+    return np.mean(np.argmax(y, axis=1) == 1)
 
 def minibatches(data, minibatch_size, shuffle=True):
     """
     Returns an iterator
     Args:
-        data: (list of np array) data[0] = X, data[1] = y typically
+        data: list of x, y
         minibatch_size: (int) 
         shuffle: (bool)
     Returns:
         iterator: yields a list of np array of size < minibatch_size
     """
-    data_size = len(data[0])
+    data_size = len(data)
     indices = np.arange(data_size)
     if shuffle:
         np.random.shuffle(indices)
     for minibatch_start in np.arange(0, data_size, minibatch_size):
         minibatch_indices = indices[minibatch_start:minibatch_start + minibatch_size]
-        yield [d[minibatch_indices] for d in data]
+        x, y = zip(*([data[i] for i in minibatch_indices]))
+        x, y = np.asarray(x), np.asarray(y)
+        yield x, y 
 
 
-def load_data(config):
+def load_data_raw(config):
+    """
+    Return data
+    Args:
+        config: modul config
+    Retuns:
+        list of raw data for each example
+    """
     data_path = "{}_{}k.npy".format(config.export_data_path, 
                                         config.max_events)
     if not config.load_from_export_data_path:
-        from dataset import Dataset
-        data = Dataset(path=config.data_path, tree=config.tree_name, 
-                       max_iter=config.max_events, verbose=config.data_verbosity,
-                       max_eta=config.max_eta, min_energy=config.min_energy)
-
+        data = load_data_raw_it(config)
         data = data.get_data()
         pickle_dump(data, data_path)
     else:
@@ -48,12 +54,52 @@ def load_data(config):
 
     return data
 
+def load_data_raw_it(config):
+    """
+    It version of load_data_raw that yields raw data for each example
+    """
+    from dataset import Dataset
+    data = Dataset(path=config.data_path, tree=config.tree_name, 
+                   max_iter=config.max_events, verbose=config.data_verbosity,
+                   max_eta=config.max_eta, min_energy=config.min_energy)
+    return data
+
+def load_data_featurized(config, featurizer=None):
+
+    data_path = "{}_featurized_{}k.npy".format(config.export_data_path, 
+                                        config.max_events)
+    
+    if not config.load_from_export_data_path:
+        data = load_data_raw_it(config)
+        data = extract_data_it(data, featurizer)
+        data = it_to_list(data)
+        pickle_dump(data, data_path)
+
+    else:
+        data = pickle_load(data_path)
+
+    return data
+
+
+def it_to_list(data):
+    """
+    Args:
+        data: generator that yields x, y
+    Returns:
+        list of (x, y)
+    """
+    print "Converting generator of (x, y) to list..."
+    res = []
+    for x, y in data:
+        res.append((x, y))
+    print "- done."
+    return res
 
 def split_data(data, dev=0.1, test=0.2):
     """
     Splits randomly data into train, dev and test set
     Args:
-        data: [x, y] where x, y are np arrays
+        data: iterable over each training example that yield (x, y)
         dev: (float) fraction of dev set 
         test: (float) fraction of test set
     Returns:
@@ -68,50 +114,63 @@ def split_data(data, dev=0.1, test=0.2):
     dev_indices = indices[int(data_size*(1-dev-test)):int(data_size*(1-test))]
     test_indices = indices[int(data_size*(1-test)):]
 
-    train_raw = [data[i] for i in train_indices]
-    dev_raw = [data[i] for i in dev_indices]
-    test_raw = [data[i] for i in test_indices]
+    train_ = [data[i] for i in train_indices]
+    dev_ = [data[i] for i in dev_indices]
+    test_ = [data[i] for i in test_indices]
 
-    return train_raw, dev_raw, test_raw
+    return train_, dev_, test_
 
 
-def extract_data(data, feature_extractor=lambda x: x):
+def extract_data(data, extractor=lambda x: x):
     """
     Extract data with feature_extractor
     Args:
         data: object on which we can iterate 
     Returns:
-        [x, y] where x, y are np arrays
+        list of (x, y)
     """
-    x = np.array([feature_extractor(d) for d in data])
-    y = np.array([d["nparts"] for d in data])
-    return [x, y]
+    return [(extractor(d), d["nparts"]) for d in data]
+
+def extract_data_it(data, featurizer=lambda x: x):
+    """
+    Iterate over data and return iterator yielding x and y
+    Args:
+        data: iterable that yields raw data
+        feature extractor: takes raw data, return np array
+    Returns:
+        iterator that yields (x, y)
+    """
+    for d in data:
+        x = featurizer(d)
+        y = d["nparts"]
+        yield x, y
 
 def preprocess_data(data, preprocess_x, preprocess_y):
     """
     Preprocess data
     Args:
-        data: [x, y] where x and y are np arrays
+        data: list of tuples (x, y)
     Returns:
-        [x, y]
+        list of tuples (x, y)
     """
-    x = preprocess_x(data[0])
-    y = preprocess_y(data[1])
-    return [x, y]
+    x, y = zip(*data)
+    x = preprocess_x(x)
+    y = preprocess_y(y)
+    return zip(x, y)
 
-
-def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
+def load_and_preprocess_data(config, featurizer=None, preprocess_x=None, preprocess_y=None, featurized=False):
     """
     Return train, dev and test set from data
     Args:
         config: config variables
-        extractor: function that takes as input the type 
+        featurizer: function that takes as input the type 
             returned by the iterator on the data and computes
             features
-        preprocess: function that takes as input the type
-            returned by the extractor
+        preprocess_x: function that takes as input the type
+            returned by the featurizer
+        featurized: (bool) if True, load the already featurized data
     Returns:
-        train, dev and test set
+        train, dev and test set, list of (x, y)
     """
     print 80 * "="
     print "INITIALIZING"
@@ -120,20 +179,35 @@ def load_and_preprocess_data(config, extractor, preprocess_x, preprocess_y):
     print "Loading data"
     t0 = time.time()
 
-    data = load_data(config)
-    train_raw, dev_raw, test_raw = split_data(data, config.dev_size, config.test_size)
+    if not featurized:
 
-    train_examples = extract_data(train_raw, extractor)
-    dev_set = extract_data(dev_raw, extractor)
-    test_set = extract_data(test_raw, extractor)
+        data = load_data_raw(config)
 
-    train_examples = preprocess_data(train_examples, preprocess_x, preprocess_y)
-    dev_set = preprocess_data(dev_set, preprocess_x, preprocess_y)
-    test_set = preprocess_data(test_set, preprocess_x, preprocess_y)
+        train_raw, dev_raw, test_raw = split_data(data, config.dev_size, config.test_size)
 
-    print "    Train set shape: {}".format(train_examples[0].shape)
-    print "    Dev   set shape: {}".format(dev_set[0].shape)
-    print "    Test  set shape: {}".format(test_set[0].shape)
+        train_ = extract_data(train_raw, featurizer)
+        dev_ = extract_data(dev_raw, featurizer)
+        test_ = extract_data(test_raw, featurizer)
+
+    else:
+        print "Warning: loading featurized data, test_raw = None"
+        data = load_data_featurized(config, featurizer)
+        train_, test_, dev_ = split_data(data, config.dev_size, config.test_size)
+        test_raw = None
+
+    if preprocess_x is not None and preprocess_y is not None:
+        train_examples = preprocess_data(train_, preprocess_x, preprocess_y)
+        dev_set        = preprocess_data(dev_, preprocess_x, preprocess_y)
+        test_set       = preprocess_data(test_, preprocess_x, preprocess_y)
+    else:
+        print "Warning: no preprocessing applied to the data"
+
+    print "    Train set shape: ({}, {})".format(
+        len(train_examples), ", ".join([str(s) for s in train_examples[0][0].shape]))
+    print "    Dev   set shape: ({}, {})".format(
+        len(dev_set), ", ".join([str(s) for s in dev_set[0][0].shape]))
+    print "    Test  set shape: ({}, {})".format(
+        len(test_set), ", ".join([str(s) for s in test_set[0][0].shape]))
 
     t1 = time.time()
     print "- done. (time elapsed {:.2f})".format(t1 - t0)
@@ -144,12 +218,12 @@ def export_data(data, modes, path):
     """
     writes features to file
     Args:
-        data [x, y] where x and y are np arrays
+        data: list of x, y
     """
     with open(path, "w") as f:
         f.write(", ".join(modes) + ", " + "nparts")
         f.write("\n")
-        for x, y in zip(data[0], data[1]):
+        for x, y in data:
             feat = ", ".join(map(str, x))
             feat += ", " + str(y) + "\n"
             f.write(feat)

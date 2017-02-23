@@ -27,17 +27,20 @@ def get_my_print(verbose):
     return lambda s, l=2: my_print(s, l, verbose)
 
 def pickle_dump(obj, path):
+    print "Dumping in file {}".format(path)
     with open(path, "w") as f:
         pickle.dump(obj, f)
+    print "- done."
 
 def pickle_load(path):
+    print "Loading from file {}".format(path)
     with open(path) as f:
         return pickle.load(f)
+    print "- done."
 
 def check_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
-
 
 def dump_results(target, label, path):
     """
@@ -92,6 +95,17 @@ def outputConfusionMatrix(tar, lab, output_size, filename):
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.savefig(filename)
+    plt.close()
+
+def simplePlot(x, ys, filename, xlabel="", ylabel=""):
+    plt.figure()
+    ys = zip(*ys)
+    for y in ys:
+        plt.plot(x, y)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.savefig(filename)
+    plt.close()
 
 
 class Progbar(object):

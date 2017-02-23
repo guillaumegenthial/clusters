@@ -125,7 +125,7 @@ class Model(object):
             acc: accuracy on dev set
         """
         logger.info("Epoch {:} out of {:}".format(epoch + 1, self.config.n_epochs))
-        prog = Progbar(target=1 + len(train_examples[0]) / self.config.batch_size)
+        prog = Progbar(target=1 + len(train_examples) / self.config.batch_size)
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, 
                                                 self.config.batch_size)):
 
@@ -134,7 +134,8 @@ class Model(object):
             prog.update(i + 1, [("train loss", train_loss)])
 
         logger.info("Evaluating on dev set")
-        fd = self.get_feed_dict(dev_set[0], self.config.dropout, dev_set[1])
+        dev_x, dev_y = zip(*dev_set)
+        fd = self.get_feed_dict(dev_x, self.config.dropout, dev_y)
         acc, = sess.run([self.accuracy], feed_dict=fd)
         logger.info("- dev acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, 
                                                  dev_baseline * 100.0))
@@ -179,14 +180,15 @@ class Model(object):
         with tf.Session() as sess:
             sess.run(self.init)
             saver.restore(sess, self.config.model_output)
-            fd = self.get_feed_dict(test_set[0], self.config.dropout, test_set[1])
+            test_x, test_y = zip(*test_set)
+            fd = self.get_feed_dict(test_x, self.config.dropout, test_y)
             acc, tar, lab = sess.run([self.accuracy, self.target, self.label], feed_dict=fd)
             logger.info("- test acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, test_baseline * 100))
             outputConfusionMatrix(tar, lab, self.config.output_size, self.config.confmatrix_output)
             if test_raw is not None:
                 self.export_results(tar, lab, test_raw)
 
-        return acc
+        return acc, test_baseline
 
     def find_best_reg_value(self, reg_values, train_examples, dev_set, test_set):
         """

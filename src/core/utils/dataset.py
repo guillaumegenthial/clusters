@@ -58,6 +58,11 @@ class Dataset(object):
 
                 yield {"topo_eta": topo_eta, "topo_phi": topo_phi, 
                        "topo_cells": topo_cells, "nparts": nparts}
+                       
+            del cells
+            del truth_parts
+            del tracks
+            del leadjets
 
 
     def __len__(self):
