@@ -9,7 +9,8 @@ from core.utils.tf_utils import xavier_weight_init, conv2d, \
                 max_pool_2x2, weight_variable, bias_variable
 from core.utils.general_utils import  Progbar, dump_results, export_matrices, \
                 outputConfusionMatrix, check_dir
-from core.utils.preprocess_utils import minibatches, baseline
+from core.utils.preprocess_utils import minibatches, baseline, \
+                default_post_process
 from core.utils.features_utils import Extractor
 
 logger = logging.getLogger('logger')
@@ -60,7 +61,7 @@ class Model(object):
         """
         Defines self.loss
         """
-        losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.pred, labels=self.y)
+        losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.pred, labels=self.y)
         self.loss = tf.reduce_mean(losses) + self.l2_loss() * self.config.reg
 
 
@@ -83,9 +84,12 @@ class Model(object):
         """
         Defines self.accuracy, self.target, self.label
         """
-        self.target = tf.argmax(self.y, axis=1)
-        self.label = tf.argmax(self.pred, axis=1)
-        self.correct_prediction = tf.equal(self.label, self.target)
+        if tf.__version__ > 0.12:
+            self.label = tf.argmax(self.pred, axis=1)
+        else:
+            self.label = tf.argmax(self.pred, dimension=1)
+            
+        self.correct_prediction = tf.equal(tf.cast(self.label, tf.int32), self.y)
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
 
     def add_init(self):
@@ -112,7 +116,7 @@ class Model(object):
         saver.save(sess, self.config.model_output)
 
 
-    def run_epoch(self, sess, epoch, train_examples, dev_set, dev_baseline):
+    def run_epoch(self, sess, epoch, train_examples, dev_set, dev_baseline, post_process):
         """
         Run one epoch of training
         Args:
@@ -125,23 +129,25 @@ class Model(object):
             acc: accuracy on dev set
         """
         logger.info("Epoch {:} out of {:}".format(epoch + 1, self.config.n_epochs))
-        prog = Progbar(target=1 + len(train_examples) / self.config.batch_size)
+        prog = Progbar(target=(len(train_examples) + self.config.batch_size - 1) / self.config.batch_size)
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, 
                                                 self.config.batch_size)):
 
+            train_x, train_y = post_process(train_x, train_y)
             fd = self.get_feed_dict(train_x, self.config.dropout, train_y)
             _, train_loss = sess.run([self.train_op, self.loss], feed_dict=fd)
             prog.update(i + 1, [("train loss", train_loss)])
 
         logger.info("Evaluating on dev set")
         dev_x, dev_y = zip(*dev_set)
+        dev_x, dev_y = post_process(dev_x, dev_y)
         fd = self.get_feed_dict(dev_x, self.config.dropout, dev_y)
         acc, = sess.run([self.accuracy], feed_dict=fd)
         logger.info("- dev acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, 
                                                  dev_baseline * 100.0))
         return acc
 
-    def train(self, train_examples, dev_set):
+    def train(self, train_examples, dev_set, post_process=default_post_process):
         """
         Train model and saves param
         Args:
@@ -161,13 +167,13 @@ class Model(object):
             logger.info("- reg: {:.6f}, lr: {:.6f}".format(self.config.reg, self.config.lr))
 
             for epoch in range(self.config.n_epochs):
-                acc = self.run_epoch(sess, epoch, train_examples, dev_set, dev_baseline)
+                acc = self.run_epoch(sess, epoch, train_examples, dev_set, dev_baseline, post_process)
                 if acc > best_acc:
                     logger.info("- new best score! saving model in {}".format(self.config.model_output))
                     best_acc = acc
                     self.save(saver, sess, self.config.model_output)
 
-    def evaluate(self, test_set, test_raw=None):
+    def evaluate(self, test_set, test_raw=None, post_process=default_post_process):
         """
         Reload weights and test on test set
         """
@@ -181,16 +187,17 @@ class Model(object):
             sess.run(self.init)
             saver.restore(sess, self.config.model_output)
             test_x, test_y = zip(*test_set)
+            test_x, test_y = post_process(test_x, test_y)
             fd = self.get_feed_dict(test_x, self.config.dropout, test_y)
-            acc, tar, lab = sess.run([self.accuracy, self.target, self.label], feed_dict=fd)
+            acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
             logger.info("- test acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, test_baseline * 100))
-            outputConfusionMatrix(tar, lab, self.config.output_size, self.config.confmatrix_output)
+            outputConfusionMatrix(test_y, lab, self.config.output_size, self.config.confmatrix_output)
             if test_raw is not None:
-                self.export_results(tar, lab, test_raw)
+                self.export_results(test_y, lab, test_raw)
 
         return acc, test_baseline
 
-    def find_best_reg_value(self, reg_values, train_examples, dev_set, test_set):
+    def find_best_reg_value(self, reg_values, train_examples, dev_set, test_set, post_process=default_post_process):
         """
         Train model for different values of reg
         Args:
@@ -203,7 +210,7 @@ class Model(object):
         for reg in reg_values:
             self.config.reg = reg
             self.train(train_examples, dev_set)
-            acc = self.evaluate(test_set)
+            acc = self.evaluate(test_set, post_process=post_process)
             result += [(reg, acc)]
 
         self.get_reg_summary(result)

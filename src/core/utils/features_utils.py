@@ -57,7 +57,8 @@ class Extractor(object):
             topo_eta: eta of cluster
             topo_phi: phi of cluster
         Returns
-            a dict of np arrays d[layer nb] = np array
+            a dict of np arrays d[layer nb] = np array if np array is not empty
+                                            else shape of the np array
         """
         layer_extractors = self.layer_extractors
         matrices = dict()
@@ -79,6 +80,9 @@ class Extractor(object):
 
         for dep, modes_ in matrices.iteritems():
             self.preservation_ratio[dep]["mat"] += np.count_nonzero(modes_["e"])
+            if np.sum(modes_["e"]) == 0:
+                for mode in self.modes:
+                    modes_[mode] = modes_[mode].shape
 
         return matrices
 
@@ -122,42 +126,54 @@ def simple_features(tops=2, mode=1):
 
         cells = d_["topo_cells"]
         ncells = len(cells)
-        cells_eta = [d_["eta"] for d_ in cells.itervalues()]
-        cells_phi = [d_["phi"] for d_ in cells.itervalues()]
-        cells_dep = [d_["dep"] for d_ in cells.itervalues()]
-        cells_e = [d_["e"] for d_ in cells.itervalues()]
-        cells_vol = [d_["vol"] for d_ in cells.itervalues()]
-        cells_pt = map_pT(cells_e, cells_eta)
 
-        cells_e_sorted = sorted(((d_["eta"], d_["phi"], d_["e"]) for d_ in cells.itervalues()),
-                                reverse=True, key=lambda (a, b, c): c)
-        top_cells = cells_e_sorted[:tops]
-        top_e = [(eta - topo_eta, phi - topo_phi, e) for (eta, phi, e) 
-                    in top_cells]
+        if ncells > 0:
 
-        d_eta = list(zip(*top_e)[0]) + [0]*(tops - len(top_e))
-        d_phi = list(zip(*top_e)[1]) + [0]*(tops - len(top_e))
-        d_e = list(zip(*top_e)[2]) + [0]*(tops - len(top_e))
-        dR = map_deltaR(d_eta, d_phi)
+            # general information
+            cells_eta = [d_["eta"] for d_ in cells.itervalues()]
+            cells_phi = [d_["phi"] for d_ in cells.itervalues()]
+            cells_dep = [d_["dep"] for d_ in cells.itervalues()]
+            cells_e = [d_["e"] for d_ in cells.itervalues()]
+            cells_vol = [d_["vol"] for d_ in cells.itervalues()]
+            cells_pt = map_pT(cells_e, cells_eta)
+            r_eta = max(cells_eta) - min(cells_eta)
+            r_phi = max(cells_phi) - min(cells_phi)
+            r_dep = max(cells_dep) - min(cells_dep)
+            vol_tot = sum(cells_vol)
 
-        cells_pt_sorted = sorted(((d_["eta"], d_["phi"], pT(d_["e"], d_["eta"])) for d_ in cells.itervalues()),
-                                reverse=True, key=lambda (a, b, c): c)
-        top_cells = cells_pt_sorted[:tops]
-        top_pt = [(eta - topo_eta, phi - topo_phi, e) for (eta, phi, e) 
-                    in top_cells]
 
-        d_eta_pt = list(zip(*top_pt)[0]) + [0]*(tops - len(top_pt))
-        d_phi_pt = list(zip(*top_pt)[1]) + [0]*(tops - len(top_pt))
-        d_pt = list(zip(*top_pt)[2]) + [0]*(tops - len(top_pt))
-        dR_pt = map_deltaR(d_eta, d_phi)
+            # get highest e
+            cells_e_sorted = sorted(((d_["eta"], d_["phi"], d_["e"]) for d_ in cells.itervalues()),
+                                    reverse=True, key=lambda (a, b, c): c)
+            top_cells = cells_e_sorted[:tops]
+            top_e = [(eta - topo_eta, phi - topo_phi, e) for (eta, phi, e) 
+                        in top_cells]
 
-        r_eta = max(cells_eta) - min(cells_eta)
-        r_phi = max(cells_phi) - min(cells_phi)
-        r_dep = max(cells_dep) - min(cells_dep)
-        vol_tot = sum(cells_vol)
+            d_eta = list(zip(*top_e)[0]) + [0]*(tops - len(top_e))
+            d_phi = list(zip(*top_e)[1]) + [0]*(tops - len(top_e))
+            d_e = list(zip(*top_e)[2]) + [0]*(tops - len(top_e))
+            dR = map_deltaR(d_eta, d_phi)
 
-        e_tot = sum([e * w for e, w in zip(cells_e, cell_weights)] if cell_weights is not None else cells_e)
-        pt_tot = sum([pt * w for pt, w in zip(cells_pt, cell_weights)] if cell_weights is not None else cells_pt)
+            # get hightest pT
+            cells_pt_sorted = sorted(((d_["eta"], d_["phi"], pT(d_["e"], d_["eta"])) for d_ in cells.itervalues()),
+                                    reverse=True, key=lambda (a, b, c): c)
+            top_cells = cells_pt_sorted[:tops]
+            top_pt = [(eta - topo_eta, phi - topo_phi, e) for (eta, phi, e) 
+                        in top_cells]
+
+            d_eta_pt = list(zip(*top_pt)[0]) + [0]*(tops - len(top_pt))
+            d_phi_pt = list(zip(*top_pt)[1]) + [0]*(tops - len(top_pt))
+            d_pt = list(zip(*top_pt)[2]) + [0]*(tops - len(top_pt))
+            dR_pt = map_deltaR(d_eta, d_phi)
+
+            # get total of energy and pt
+            e_tot = sum([e * w for e, w in zip(cells_e, cell_weights)] if cell_weights is not None else cells_e)
+            pt_tot = sum([pt * w for pt, w in zip(cells_pt, cell_weights)] if cell_weights is not None else cells_pt)
+        
+        else:
+            r_eta = r_phi = r_dep = vol_tot = e_tot = pt_tot = 0
+            d_e = dR = d_pt = dR_pt = [0] * tops
+
 
         if mode == 1:
             result =  np.array([ncells, topo_eta, topo_phi, r_eta, r_phi, r_dep, vol_tot, e_tot] 
@@ -184,29 +200,85 @@ def simple_features(tops=2, mode=1):
 
     return f, feat
 
-def cnn_simple_features(extractor):
-    """
-    Returns a (nphi, neta, nlayers) np array
-    Assumes that the layer extractors yield same dimension arrays
-    Args:
-        cells: dict {cell_uid: {"eta": eta, ...}, ...}
-        extractor: instance of Extractor
-    Returns:
-        f: (function)
-    """
-    def lambda_function(d_):
+def wrap_extractor(extractor):
+    def f(d_):
         cells    = d_["topo_cells"]
         topo_eta = d_["topo_eta"]
         topo_phi = d_["topo_phi"]
         matrices = extractor(cells, topo_eta, topo_phi)
+        return matrices
+
+    return f
+
+def extractor_default_preprocess(extractor):
+
+    def f(data):
+        print "preprocessing..."
+        # prepare storage for statistics
+        eps = 10^(-6)
+        mean = dict()
+        var = dict()
+        counts = dict()
+        for dep, l_ext in extractor.layer_extractors.iteritems():
+                mean[dep] = dict()
+                var[dep] = dict()
+                counts[dep] = 0
+                for mode in extractor.modes:
+                    mean[dep][mode] = np.zeros([l_ext.n_phi, l_ext.n_eta])
+                    var[dep][mode] = np.zeros([l_ext.n_phi, l_ext.n_eta])
+
+        # get statistics
+        for x, y in data:
+            for dep, modes_ in x.iteritems():
+                found = False
+                for mode, dat in modes_.iteritems():
+                    if type(dat) != tuple:
+                        mean[dep][mode] += dat
+                        var[dep][mode] += dat**2
+                        found = True
+                if found:
+                    counts[dep] += 1
+
+        # compute statistics
+        for dep in mean.iterkeys():
+            counts_dep = counts[dep]
+            for mode in extractor.modes:
+                mean[dep][mode] /= counts_dep
+                var[dep][mode] /= counts_dep
+                var[dep][mode] -= (mean[dep][mode])**2
+
+        # apply statistics
+        for i in range(len(data)):
+            for dep, modes_ in data[i][0].iteritems():
+                for mode, dat in modes_.iteritems():
+                    if type(dat) != tuple:
+                        data[i][0][dep][mode] = (dat - mean[dep][mode]) / (np.sqrt(var[dep][mode]) + eps)
+
+        print "- done."
+        return data
+
+    return f
+
+
+def extractor_post_process(extractor, output_size):
+    def f(X, Y):
         result = []
-        for dep_, modes_ in matrices.iteritems():
-            for mode_, mat_ in modes_.iteritems(): 
-                result.append(mat_)
+        for x in X:
+            result_ = []
+            for dep, modes_ in x.iteritems():
+                for mode, dat in modes_.iteritems():
+                    if type(dat) != tuple:
+                        result_.append(dat)
+                    else:
+                        n_phi = extractor.layer_extractors[dep].n_phi
+                        n_eta = extractor.layer_extractors[dep].n_eta
+                        result_.append(np.zeros([n_phi, n_eta]))
 
-        return np.transpose(np.array(result), (1, 2, 0))
+            result.append(result_)
 
-    return lambda_function
+        return np.transpose(np.asarray(result), (0, 3, 2, 1)), np.minimum(Y, output_size-1)
+
+    return f
 
 def pT(I, eta):
     """

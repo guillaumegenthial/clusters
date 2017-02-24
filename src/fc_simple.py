@@ -14,11 +14,13 @@ n_layers = len(config.layer_extractors)
 n_phi = config.layer_extractors.values()[0].n_phi
 n_eta = config.layer_extractors.values()[0].n_eta
 n_features = n_layers * len(config.modes)
-features = cnn_simple_features(extractor)
+featurizer = cnn_simple_features(extractor)
+preprocess_x = default_preprocess
+preprocess_y = one_hot(config.output_size)
 
 # get data
 train_examples, dev_set, test_set, test_raw = load_and_preprocess_data(config, 
-                        features, default_preprocess, one_hot(config.output_size))
+                        featurizer, preprocess_x, preprocess_y)
 
 # model
 model = RawRegression(config, n_phi, n_eta, n_features)

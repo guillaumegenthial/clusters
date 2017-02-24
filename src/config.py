@@ -4,14 +4,13 @@ from core.utils.features_utils import LayerExtractor
 # general
 exp_name = "plots_2k"
 config_file = "config.py"
-train_mode = "train"
+exp_mode = "test"
 
 # data
 data_path = "data/ntuple_v3_2000k.root"
 data_verbosity = 2
-max_events = 10
-export_data_path = "data/ntuple_v3"
-load_from_export_data_path = True # speedup x2000
+max_events = 100
+export_data_path = "data/ntuple_v3_cnn"
 tree_name = "SimpleJet"
 batch_size = 20
 dev_size = 0.1
@@ -19,6 +18,7 @@ test_size = 0.2
 max_eta = 0.5
 min_energy = 20
 modes = ["e", "vol"]
+featurized = True
 
 # features
 tops = 2

@@ -57,7 +57,7 @@ class Dataset(object):
                 topo_cells = map_cells(cells, cell_ids)
 
                 yield {"topo_eta": topo_eta, "topo_phi": topo_phi, 
-                       "topo_cells": topo_cells, "nparts": nparts}
+                       "topo_cells": topo_cells, "nparts": nparts}, i
                        
             del cells
             del truth_parts
@@ -88,9 +88,8 @@ class Dataset(object):
             a list of dict
         """
         data = []
-        for i, d_ in enumerate(self):
+        for d_, _ in self:
             data.append(d_)
-        self.length = i
         return data
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ class Regression(Model):
         Defines self.x and self.y, tf.placeholders
         """
         self.x = tf.placeholder(tf.float32, shape=[None, self.config.input_size])
-        self.y = tf.placeholder(tf.int32, shape=[None, self.config.output_size])
+        self.y = tf.placeholder(tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
 
     def get_x(self):

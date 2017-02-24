@@ -1,8 +1,9 @@
 import sys
 import time
+import os
 import numpy as np
 import pickle
-from general_utils import pickle_dump, pickle_load
+from general_utils import pickle_dump, pickle_load, Progbar
 
 def baseline(data, target=1):
     """
@@ -12,7 +13,7 @@ def baseline(data, target=1):
         traget: (int) the class target
     """
     y = zip(*data)[1]
-    return np.mean(np.argmax(y, axis=1) == 1)
+    return np.mean(np.asarray(y) == 1)
 
 def minibatches(data, minibatch_size, shuffle=True):
     """
@@ -31,7 +32,6 @@ def minibatches(data, minibatch_size, shuffle=True):
     for minibatch_start in np.arange(0, data_size, minibatch_size):
         minibatch_indices = indices[minibatch_start:minibatch_start + minibatch_size]
         x, y = zip(*([data[i] for i in minibatch_indices]))
-        x, y = np.asarray(x), np.asarray(y)
         yield x, y 
 
 
@@ -45,7 +45,7 @@ def load_data_raw(config):
     """
     data_path = "{}_{}k.npy".format(config.export_data_path, 
                                         config.max_events)
-    if not config.load_from_export_data_path:
+    if not os.path.exists(data_path):
         data = load_data_raw_it(config)
         data = data.get_data()
         pickle_dump(data, data_path)
@@ -69,10 +69,10 @@ def load_data_featurized(config, featurizer=None):
     data_path = "{}_featurized_{}k.npy".format(config.export_data_path, 
                                         config.max_events)
     
-    if not config.load_from_export_data_path:
+    if not os.path.exists(data_path):
         data = load_data_raw_it(config)
         data = extract_data_it(data, featurizer)
-        data = it_to_list(data)
+        data = it_to_list(data, config)
         pickle_dump(data, data_path)
 
     else:
@@ -81,7 +81,7 @@ def load_data_featurized(config, featurizer=None):
     return data
 
 
-def it_to_list(data):
+def it_to_list(data, config):
     """
     Args:
         data: generator that yields x, y
@@ -90,8 +90,15 @@ def it_to_list(data):
     """
     print "Converting generator of (x, y) to list..."
     res = []
-    for x, y in data:
+    prog = Progbar(target=config.max_events)
+    count_ = 0
+    for (x, y), i in data:
+        count_ += 1
         res.append((x, y))
+        if count_ % 20 == 0 and i < config.max_events - 1:
+            prog.update(i + 1, strict=[("Sample no ", count_)])
+            
+    prog.update(i+1, strict=[("Sample no ", count_)])
     print "- done."
     return res
 
@@ -140,12 +147,12 @@ def extract_data_it(data, featurizer=lambda x: x):
     Returns:
         iterator that yields (x, y)
     """
-    for d in data:
+    for d, i in data:
         x = featurizer(d)
         y = d["nparts"]
-        yield x, y
+        yield (x, y), i
 
-def preprocess_data(data, preprocess_x, preprocess_y):
+def make_preprocess(preprocess_x, preprocess_y):
     """
     Preprocess data
     Args:
@@ -153,12 +160,15 @@ def preprocess_data(data, preprocess_x, preprocess_y):
     Returns:
         list of tuples (x, y)
     """
-    x, y = zip(*data)
-    x = preprocess_x(x)
-    y = preprocess_y(y)
-    return zip(x, y)
+    def f(data):
+        x, y = zip(*data)
+        x = preprocess_x(x)
+        y = preprocess_y(y)
+        return zip(x, y)
+        
+    return f
 
-def load_and_preprocess_data(config, featurizer=None, preprocess_x=None, preprocess_y=None, featurized=False):
+def load_and_preprocess_data(config, featurizer, preprocess=None):
     """
     Return train, dev and test set from data
     Args:
@@ -166,9 +176,8 @@ def load_and_preprocess_data(config, featurizer=None, preprocess_x=None, preproc
         featurizer: function that takes as input the type 
             returned by the iterator on the data and computes
             features
-        preprocess_x: function that takes as input the type
+        preprocess: function that takes as input the type
             returned by the featurizer
-        featurized: (bool) if True, load the already featurized data
     Returns:
         train, dev and test set, list of (x, y)
     """
@@ -179,8 +188,7 @@ def load_and_preprocess_data(config, featurizer=None, preprocess_x=None, preproc
     print "Loading data"
     t0 = time.time()
 
-    if not featurized:
-
+    if not config.featurized:
         data = load_data_raw(config)
 
         train_raw, dev_raw, test_raw = split_data(data, config.dev_size, config.test_size)
@@ -195,24 +203,27 @@ def load_and_preprocess_data(config, featurizer=None, preprocess_x=None, preproc
         train_, test_, dev_ = split_data(data, config.dev_size, config.test_size)
         test_raw = None
 
-    if preprocess_x is not None and preprocess_y is not None:
-        train_examples = preprocess_data(train_, preprocess_x, preprocess_y)
-        dev_set        = preprocess_data(dev_, preprocess_x, preprocess_y)
-        test_set       = preprocess_data(test_, preprocess_x, preprocess_y)
+    if preprocess is not None:
+        train_ = preprocess(train_)
+        dev_   = preprocess(dev_)
+        test_  = preprocess(test_)
     else:
         print "Warning: no preprocessing applied to the data"
 
-    print "    Train set shape: ({}, {})".format(
-        len(train_examples), ", ".join([str(s) for s in train_examples[0][0].shape]))
-    print "    Dev   set shape: ({}, {})".format(
-        len(dev_set), ", ".join([str(s) for s in dev_set[0][0].shape]))
-    print "    Test  set shape: ({}, {})".format(
-        len(test_set), ", ".join([str(s) for s in test_set[0][0].shape]))
+    try:
+        print "    Train set shape: ({}, {})".format(
+            len(train_), ", ".join([str(s) for s in train_[0][0].shape]))
+        print "    Dev   set shape: ({}, {})".format(
+            len(dev_), ", ".join([str(s) for s in dev_[0][0].shape]))
+        print "    Test  set shape: ({}, {})".format(
+            len(test_), ", ".join([str(s) for s in test_[0][0].shape]))
+    except:
+        pass
 
     t1 = time.time()
     print "- done. (time elapsed {:.2f})".format(t1 - t0)
     
-    return train_examples, dev_set, test_set, test_raw
+    return train_, dev_, test_, test_raw
 
 def export_data(data, modes, path):
     """
@@ -239,6 +250,12 @@ def one_hot(output_size):
         return one_hot
     return f
 
+def max_y(output_size):
+    def f(y):
+        y = np.asarray([min(y_, output_size-1) for y_ in y])
+        return y
+    return f
+
 def default_preprocess(X):
     """
     Preprocess X by mean substracting and normalization
@@ -250,6 +267,9 @@ def default_preprocess(X):
     X = mean_substraction(X)
     X = normalization(X)
     return X
+
+def default_post_process(X, Y):
+    return np.asarray(X), np.asarray(Y)
 
 def no_preprocess(X):
     return X

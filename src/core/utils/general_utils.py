@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import numpy as np
-import pickle
+import cPickle as pickle
 import copy
 import matplotlib
 matplotlib.use('agg')
@@ -28,13 +28,13 @@ def get_my_print(verbose):
 
 def pickle_dump(obj, path):
     print "Dumping in file {}".format(path)
-    with open(path, "w") as f:
-        pickle.dump(obj, f)
+    with open(path, "wb") as f:
+        pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
     print "- done."
 
 def pickle_load(path):
     print "Loading from file {}".format(path)
-    with open(path) as f:
+    with open(path, "rb") as f:
         return pickle.load(f)
     print "- done."
 
@@ -127,7 +127,7 @@ class Progbar(object):
         self.seen_so_far = 0
         self.verbose = verbose
 
-    def update(self, current, values=[], exact=[]):
+    def update(self, current, values=[], exact=[], strict=[]):
         """
         Updates the progress bar.
         # Arguments
@@ -149,6 +149,12 @@ class Progbar(object):
             if k not in self.sum_values:
                 self.unique_values.append(k)
             self.sum_values[k] = [v, 1]
+
+        for k, v in strict:
+            if k not in self.sum_values:
+                self.unique_values.append(k)
+            self.sum_values[k] = v
+
         self.seen_so_far = current
 
         now = time.time()

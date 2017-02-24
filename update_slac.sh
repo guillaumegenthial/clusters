@@ -1,2 +1,2 @@
 #!/bin/bash
-rsync -rtv . genthial@atlint03.slac.stanford.edu:~/private/clusters
+rsync -rtv --exclude-from='.rsyncignore' . genthial@atlint03.slac.stanford.edu:~/private/clusters
