@@ -3,6 +3,7 @@ import sys
 import time
 import numpy as np
 import cPickle as pickle
+from optparse import OptionParser
 import copy
 import matplotlib
 matplotlib.use('agg')
@@ -10,6 +11,17 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import itertools
 
+
+def args():
+    parser = OptionParser(usage='usage: %prog [options] ')
+    parser.add_option('-c', '--config',
+                      action='store',
+                      dest='config',
+                      default='baseline',
+                      help='config file',)
+   
+    (options, _) = parser.parse_args()
+    return options
 
 def my_print(string, level=2, verbose=0):
     """

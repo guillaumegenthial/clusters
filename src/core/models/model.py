@@ -18,7 +18,7 @@ logger.setLevel(logging.DEBUG)
 logging.basicConfig(format='%(message)s', level=logging.DEBUG)
 
 class Model(object):
-    def __init__(self, config):
+    def __init__(self, config, layers=None):
         self.config = config
         if self.config.output_path is None:
             self.config.output_path = "results/{:%Y%m%d_%H%M%S}/".format(datetime.now())
@@ -30,14 +30,21 @@ class Model(object):
         self.config.plot_output = self.config.output_path + "plots/"
         self.config.log_output = self.config.output_path + "log"
 
+        if layers is None:
+            self.layers = self.config.layers
+        else:
+            self.layers = layers
+
         handler = logging.FileHandler(self.config.log_output)
         handler.setLevel(logging.DEBUG)
         handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s: %(message)s'))
         logging.getLogger().addHandler(handler)
 
+
     def add_placeholder(self):
         """
         Defines self.x and self.y, tf.placeholders
+        Defines self.x_shape of type [d1, d2, ...]
         """
         raise NotImplementedError
 
@@ -55,7 +62,16 @@ class Model(object):
         """
         Defines self.pred
         """
-        raise NotImplementedError
+        pred = self.x
+        input_shape = self.x_shape
+        for layer in self.layers:
+            print "- at layer {}".format(layer.name)
+            layer.set_param(dropout=self.dropout, input_shape=input_shape)
+            pred = layer(pred)
+            input_shape = layer.output_shape
+
+        self.pred = pred
+
 
     def add_loss_op(self):
         """
@@ -141,7 +157,7 @@ class Model(object):
         logger.info("Evaluating on dev set")
         dev_x, dev_y = zip(*dev_set)
         dev_x, dev_y = post_process(dev_x, dev_y)
-        fd = self.get_feed_dict(dev_x, self.config.dropout, dev_y)
+        fd = self.get_feed_dict(dev_x, 1.0, dev_y)
         acc, = sess.run([self.accuracy], feed_dict=fd)
         logger.info("- dev acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, 
                                                  dev_baseline * 100.0))
@@ -188,7 +204,7 @@ class Model(object):
             saver.restore(sess, self.config.model_output)
             test_x, test_y = zip(*test_set)
             test_x, test_y = post_process(test_x, test_y)
-            fd = self.get_feed_dict(test_x, self.config.dropout, test_y)
+            fd = self.get_feed_dict(test_x, 1.0, test_y)
             acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
             logger.info("- test acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, test_baseline * 100))
             outputConfusionMatrix(test_y, lab, self.config.output_size, self.config.confmatrix_output)
@@ -236,7 +252,7 @@ class Model(object):
         """
         Copies config file to outputpath
         """
-        copyfile(self.config.config_file, self.config.config_output)
+        copyfile(self.config.__file__.split(".")[-2]+".py", self.config.config_output)
 
     def export_result(self, tar, lab, data_raw, extractor):
         """
