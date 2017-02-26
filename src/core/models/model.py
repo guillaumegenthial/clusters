@@ -7,11 +7,12 @@ from datetime import datetime
 import logging
 from core.utils.tf_utils import xavier_weight_init, conv2d, \
                 max_pool_2x2, weight_variable, bias_variable
-from core.utils.general_utils import  Progbar, dump_results, export_matrices, \
+from core.utils.general_utils import  Progbar, dump_results, \
                 outputConfusionMatrix, check_dir
 from core.utils.preprocess_utils import minibatches, baseline, \
                 default_post_process
 from core.utils.features_utils import Extractor
+from core.utils.evaluate_utils import raw_export_result
 
 logger = logging.getLogger('logger')
 logger.setLevel(logging.DEBUG)
@@ -189,7 +190,7 @@ class Model(object):
                     best_acc = acc
                     self.save(saver, sess, self.config.model_output)
 
-    def evaluate(self, test_set, test_raw=None, post_process=default_post_process):
+    def evaluate(self, test_set, post_process=default_post_process, test_raw=None, export_result=raw_export_result):
         """
         Reload weights and test on test set
         """
@@ -209,7 +210,8 @@ class Model(object):
             logger.info("- test acc: {:.2f} (baseline {:.2f})".format(acc * 100.0, test_baseline * 100))
             outputConfusionMatrix(test_y, lab, self.config.output_size, self.config.confmatrix_output)
             if test_raw is not None:
-                self.export_results(test_y, lab, test_raw)
+                export_results = export_result(self.config, logger)
+                export_results(test_y, lab, test_raw)
 
         return acc, test_baseline
 
@@ -254,29 +256,5 @@ class Model(object):
         """
         copyfile(self.config.__file__.split(".")[-2]+".py", self.config.config_output)
 
-    def export_result(self, tar, lab, data_raw, extractor):
-        """
-        Export matrices of input
-        """
-        path = self.config.plot_output+ "true_{}_pred{}/".format(tar, lab)
-        check_dir(path)
-        matrices = extractor(data_raw["topo_cells"], data_raw["topo_eta"], 
-                             data_raw["topo_phi"])
-        export_matrices(matrices, path)
 
-    def export_results(self, tar, lab, test_raw=None):
-        """
-        Export confusion matrix
-        Export matrices for all pairs (tar, lab)
-        """
-        if test_raw is not None:
-            extractor = Extractor(self.config.layer_extractors)
-            tar_lab_seen = set()
-            for (t, l, d_) in zip(tar, lab, test_raw):
-                if (t, l) not in tar_lab_seen:
-                    tar_lab_seen.add((t, l))
-                    self.export_result(t, l, d_, extractor)
-                    logger.info("- extracted layers for true label {}, pred {} in {}".format(
-                                                t, l, self.config.plot_output))
-
-
+    

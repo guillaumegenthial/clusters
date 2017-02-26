@@ -1,6 +1,7 @@
 import sys
 import time
 import os
+import copy
 import numpy as np
 import pickle
 from general_utils import pickle_dump, pickle_load, Progbar
@@ -201,7 +202,7 @@ def load_and_preprocess_data(config, featurizer, preprocess=None):
         print "Warning: loading featurized data, test_raw = None"
         data = load_data_featurized(config, featurizer)
         train_, test_, dev_ = split_data(data, config.dev_size, config.test_size)
-        test_raw = None
+        test_raw = copy.deepcopy(test_)
 
     if preprocess is not None:
         train_ = preprocess(train_)

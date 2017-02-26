@@ -8,5 +8,4 @@ explore/*.pdf
 explore/*.RData
 explore/*.RHistory
 *.sh
-slac_readme.md
 .rsyncignore

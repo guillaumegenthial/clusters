@@ -17,7 +17,7 @@ dev_size = 0.1
 test_size = 0.2
 max_eta = 0.5
 min_energy = 20
-featurized = True
+featurized = False
 
 # features
 tops = 2
@@ -34,7 +34,7 @@ output_path = None
 dropout = 1.0
 lr = 0.001
 reg = 0.01
-n_epochs = 10
+n_epochs = 1
 reg_values = np.logspace(-6,0.1,20)
 
 layers = [
