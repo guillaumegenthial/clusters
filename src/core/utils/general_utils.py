@@ -12,6 +12,11 @@ def args():
                       dest='config',
                       default='baseline',
                       help='config file',)
+    parser.add_option('-t', '--test',
+                      action='store_true',
+                      dest='test',
+                      default=False,
+                      help='Use subset of dataset',)
    
     (options, _) = parser.parse_args()
     return options

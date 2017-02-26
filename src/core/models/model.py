@@ -67,7 +67,7 @@ class Model(object):
         pred = self.x
         input_shape = self.x_shape
         for layer in self.layers:
-            print "- at layer {}".format(layer.name)
+            print "- at layer {}, input shape {}".format(layer.name, input_shape)
             layer.set_param(dropout=self.dropout, input_shape=input_shape)
             pred = layer(pred)
             input_shape = layer.output_shape

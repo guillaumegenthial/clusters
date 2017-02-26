@@ -9,7 +9,7 @@ exp_name = "plots_2k"
 # data
 data_path = "data/ntuple_v3_2000k.root"
 data_verbosity = 2
-max_events = 10
+max_events = 500
 export_data_path = "data/ntuple_v3_cnn"
 tree_name = "SimpleJet"
 batch_size = 20
@@ -17,7 +17,6 @@ dev_size = 0.1
 test_size = 0.2
 max_eta = 0.5
 min_energy = 20
-modes = ["e", "vol"]
 featurized = True
 
 # features
@@ -42,14 +41,19 @@ output_path = None
 dropout = 1.0
 lr = 0.001
 reg = 0.01
-n_epochs = 10
+n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
-selection = "f1"
+selection = "acc"
 f1_mode = "weighted"
+# model
 layers = [
-    Flatten(name="flat_input"),
+    Conv2d(5, 5, n_features, 100, name="conv1"),
+    ReLu(),
+    MaxPool(name="pool1"),
+    Flatten(),
     FullyConnected(100, name="fc1"),
     ReLu(),
     Dropout(),
     FullyConnected(output_size, name="fc2"),
     ]
+

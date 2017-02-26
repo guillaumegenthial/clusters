@@ -12,6 +12,8 @@ from core.utils.evaluate_utils import featurized_export_result
 # import config
 options = args()
 config = importlib.import_module("configs."+options.config)
+if options.test:
+    config.max_events = 10
 
 # data featurizers
 extractor = config.extractor
