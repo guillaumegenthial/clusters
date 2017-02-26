@@ -43,8 +43,8 @@ lr = 0.001
 reg = 0.01
 n_epochs = 10
 reg_values = np.logspace(-6,0.1,20)
-
-
+selection = "f1"
+f1_mode = "weighted"
 # model
 layers = [
     Conv2d(5, 5, n_features, 10, name="conv1"),

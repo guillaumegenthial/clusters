@@ -6,15 +6,6 @@ import numpy as np
 import pickle
 from general_utils import pickle_dump, pickle_load, Progbar
 
-def baseline(data, target=1):
-    """
-    Return fraction of data example with label equal to target
-    Args:
-        data: list of (x, y)
-        traget: (int) the class target
-    """
-    y = zip(*data)[1]
-    return np.mean(np.asarray(y) == 1)
 
 def minibatches(data, minibatch_size, shuffle=True):
     """

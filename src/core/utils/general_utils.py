@@ -4,13 +4,6 @@ import time
 import numpy as np
 import cPickle as pickle
 from optparse import OptionParser
-import copy
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
-import itertools
-
 
 def args():
     parser = OptionParser(usage='usage: %prog [options] ')
@@ -53,51 +46,6 @@ def pickle_load(path):
 def check_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
-
-def dump_results(target, label, path):
-    """
-    Writes results in a txt file
-    Args:
-        target: np array of the true labels [1, 2, 1, 1 ...]
-        label: np array of the predicted labels
-        path: path where to write the results
-    """
-    with open(path, "w") as f:
-        f.write("True Pred\n")
-        for t, l in zip(target, label):
-            f.write("{}    {}\n".format(t, l))
-
-
-def outputConfusionMatrix(tar, lab, output_size, filename):
-    """ Generate a confusion matrix """
-    cm = confusion_matrix(tar, lab, labels=range(output_size))
-    plt.figure()
-    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Reds)
-    plt.colorbar()
-    classes = range(output_size)
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes)
-    plt.yticks(tick_marks, classes)
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, cm[i, j],
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.savefig(filename)
-    plt.close()
-
-def simplePlot(x, ys, filename, xlabel="", ylabel=""):
-    plt.figure()
-    ys = zip(*ys)
-    for y in ys:
-        plt.plot(x, y)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.savefig(filename)
-    plt.close()
 
 
 class Progbar(object):

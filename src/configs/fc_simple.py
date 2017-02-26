@@ -42,10 +42,10 @@ output_path = None
 dropout = 1.0
 lr = 0.001
 reg = 0.01
-n_epochs = 1
+n_epochs = 10
 reg_values = np.logspace(-6,0.1,20)
-
-
+selection = "f1"
+f1_mode = "weighted"
 layers = [
     Flatten(name="flat_input"),
     FullyConnected(100, name="fc1"),

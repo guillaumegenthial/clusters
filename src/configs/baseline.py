@@ -4,12 +4,12 @@ from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
 
 # general
-exp_name = "plots_2k"
+exp_name = "baseline"
 
 # data
 data_path = "data/ntuple_v3_2000k.root"
 data_verbosity = 2
-max_events = 10
+max_events = 100
 export_data_path = "data/ntuple_v3"
 tree_name = "SimpleJet"
 batch_size = 20
@@ -34,9 +34,10 @@ output_path = None
 dropout = 1.0
 lr = 0.001
 reg = 0.01
-n_epochs = 1
+n_epochs = 2
 reg_values = np.logspace(-6,0.1,20)
-
+selection = "f1"
+f1_mode = "weighted"
 layers = [
     Dropout(name="drop1"), 
     FullyConnected(10, name="fc1"),

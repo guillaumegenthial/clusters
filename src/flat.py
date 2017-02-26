@@ -1,11 +1,11 @@
 import numpy as np
 import importlib
-from core.utils.preprocess_utils import  default_preprocess, baseline, \
+from core.utils.preprocess_utils import  default_preprocess, \
     load_and_preprocess_data, no_preprocess, one_hot, export_data, \
     make_preprocess, load_data_raw_it, extract_data_it, it_to_list, \
     max_y
 from core.utils.features_utils import simple_features, Extractor
-from core.utils.general_utils import simplePlot, args
+from core.utils.general_utils import args
 from core.models.inputs import FlatInput
 from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
