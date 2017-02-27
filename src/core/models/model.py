@@ -8,7 +8,7 @@ from sklearn.metrics import f1_score
 from datetime import datetime
 from core.utils.tf_utils import xavier_weight_init, conv2d, \
                 max_pool_2x2, weight_variable, bias_variable
-from core.utils.general_utils import  Progbar, check_dir
+from core.utils.general_utils import  Progbar, check_dir, get_all_dirs
 from core.utils.preprocess_utils import minibatches, \
                 default_post_process
 from core.utils.features_utils import Extractor
@@ -23,7 +23,11 @@ class Model(object):
     def __init__(self, config, layers=None):
         self.config = config
         if self.config.output_path is None:
-            self.config.output_path = "results/{:%Y%m%d_%H%M%S}/".format(datetime.now())
+            if self.config.restore:
+                self.config.output_path = "results/{}/".format(max(get_all_dirs("results/")))
+            else:
+                self.config.output_path = "results/{:%Y%m%d_%H%M%S}/".format(datetime.now())
+
         check_dir(self.config.output_path)
         self.config.model_output = self.config.output_path + "model.weights/"
         self.config.eval_output = self.config.output_path + "results.txt"
@@ -183,11 +187,15 @@ class Model(object):
         saver = tf.train.Saver()
         self.export_config()
         with tf.Session() as sess:
-            sess.run(self.init)
             logger.info(80 * "=")
             logger.info("TRAINING")
             logger.info(80 * "=")
             logger.info("- reg: {:.6f}, lr: {:.6f}".format(self.config.reg, self.config.lr))
+
+            sess.run(self.init)
+            if self.config.restore:
+                logger.info("- Restoring model from {}".format(self.config.model_output))
+                saver.restore(sess, self.config.model_output)
 
             for epoch in range(self.config.n_epochs):
                 acc, dev_f1 = self.run_epoch(sess, epoch, train_examples, dev_set, 
@@ -218,23 +226,23 @@ class Model(object):
         saver = tf.train.Saver()
         with tf.Session() as sess:
             sess.run(self.init)
+            logger.info("Restoring model from {}".format(self.config.model_output))
             saver.restore(sess, self.config.model_output)
             fd = self.get_feed_dict(test_x, 1.0, test_y)
             acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
 
             test_f1 = f1_score(test_y, lab, labels=range(self.config.output_size), average=self.config.f1_mode)
 
-            logger.info("- test acc: {:04.2f} (baseline {:04.2f}) f1: {:04.2f} (baseline {:04.2f})".format(
+            logger.info("- test acc: {:.4} (baseline {:.4}) f1: {:.4} (baseline {:.4})".format(
             acc * 100.0, test_baseline * 100.0, test_f1 * 100.0, test_baseline_f1*100.0))
 
             outputConfusionMatrix(test_y, lab, self.config.output_size, self.config.confmatrix_output)
-            logger.info("- F1 Baseline")
-            outputF1Score(self.config, logger, test_y, np.ones(len(test_y)))
-            logger.info("- F1 Model")
-            outputF1Score(self.config, logger, test_y, lab)
+            outputF1Score(self.config, logger, test_y, np.ones(len(test_y)), "Baseline")
+            logger.info("\n")
+            outputF1Score(self.config, logger, test_y, lab, "Model")
+
             if test_raw is not None:
-                export_results = export_result(self.config, logger)
-                export_results(test_y, lab, test_raw)
+                export_result(self.config, logger)(test_y, lab, test_raw)
 
         return acc, test_baseline
 

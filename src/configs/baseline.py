@@ -30,11 +30,12 @@ for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
 
 # model
+restore = False
 output_path = None
 dropout = 1.0
 lr = 0.001
 reg = 0.01
-n_epochs = 2
+n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
 selection = "f1"
 f1_mode = "weighted"

@@ -9,6 +9,11 @@ from sklearn.metrics import confusion_matrix, f1_score, \
 from features_utils import Extractor
 from general_utils import check_dir
 
+# deactivate undefined metric warning from sklearn
+import warnings
+from sklearn.metrics.classification import UndefinedMetricWarning
+warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
+
 
 def baseline(y, target=1):
     """
@@ -133,40 +138,34 @@ def outputConfusionMatrix(tar, lab, output_size, filename):
     plt.savefig(filename)
     plt.close()
 
-def outputF1Score(config, logger, tar, lab):
-    labels = range(config.output_size)
+def outputF1Score(config, logger, tar, lab, name, labels=None):
+    if labels is None:
+        labels = range(config.output_size)  
 
-    f1_micro = f1_score(tar, lab, labels=labels, average="micro")
-    f1_weighted = f1_score(tar, lab, labels=labels, average="weighted")
-    pr_micro = precision_score(tar, lab, labels=labels, average="micro")
-    pr_weighted = precision_score(tar, lab, labels=labels, average="weighted")
-    rc_micro = recall_score(tar, lab, labels=labels, average="micro")
-    rc_weighted = recall_score(tar, lab, labels=labels, average="weighted")
+    averages = ["micro", "macro", "weighted"]
 
-    logger.info("  F1        (micro): {:04.2f}\t (weighted): {:04.2f}".format(100*f1_micro, 100*f1_weighted))
-    logger.info("  Precision (micro): {:04.2f}\t (weighted): {:04.2f}".format(100*pr_micro, 100*pr_weighted))
-    logger.info("  Recall    (micro): {:04.2f}\t (weighted): {:04.2f}".format(100*rc_micro, 100*rc_weighted))
+    logger.info("\t".join([name + " "*(len(max(averages, key=len)) - len(name)), 
+                        "Precision", "Recall", "F1"]))
+    for av in averages:
+
+        f1 = f1_score(tar, lab, labels=labels, average=av)
+        rc = recall_score(tar, lab, labels=labels, average=av)
+        pr = precision_score(tar, lab, labels=labels, average=av)
+
+        av_toprint = av + " "*(len(max(averages, key=len)) - len(av))
+        logger.info("\t".join([av_toprint, "{:.4}".format(pr*100.0)+" "*(len("Precision")-4), 
+            "{:.4}".format(rc*100.0)+" "*(len("Recall")-4), "{:.4}".format(f1*100.0)]))
 
 
     f1_global = f1_score(tar, lab, labels=labels, average=None)
     pr_global = precision_score(tar, lab, labels=labels, average=None)
     rc_global = recall_score(tar, lab, labels=labels, average=None)
 
-    f1_global = ["  f1 "] + ["{:04.2f}".format(100*f1) for f1 in f1_global]
-    pr_global = ["  pr "] + ["{:04.2f}".format(100*pr) for pr in pr_global]
-    rc_global = ["  rc "] + ["{:04.2f}".format(100*rc) for rc in rc_global]
+    for (pr, rc, f1, lab) in zip(pr_global, rc_global, f1_global, labels):
+        lab_toprint = "lab {}".format(lab) + " "*(len(max(averages, key=len)) - len("lab {}".format(lab)))
+        logger.info("\t".join([lab_toprint, "{:.4}".format(pr*100.0)+" "*(len("Precision")-4), 
+            "{:.4}".format(rc*100.0)+" "*(len("Recall")-4), "{:.4}".format(f1*100.0)]))
 
-    f1_labels = "\t".join(["  lab"] + ["{}   ".format(i) for i in labels])
-
-    f1_global_str = "\t".join(f1_global)
-    pr_global_str = "\t".join(pr_global)
-    rc_global_str = "\t".join(rc_global)
-
-
-    logger.info(f1_labels)
-    logger.info(pr_global_str)
-    logger.info(rc_global_str)
-    logger.info(f1_global_str)
 
    
 

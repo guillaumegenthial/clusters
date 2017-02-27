@@ -16,6 +16,13 @@ options = args()
 config = importlib.import_module("configs."+options.config)
 if options.test:
     config.max_events = 10
+    config.n_epochs = 2
+
+if options.restore:
+    config.restore = True
+
+if options.epochs != 20:
+    config.n_epochs = options.epochs
 
 # data featurizer
 featurizer, _ = simple_features(config.tops, config.feature_mode)

@@ -12,11 +12,25 @@ def args():
                       dest='config',
                       default='baseline',
                       help='config file',)
+
+    parser.add_option('-e', '--epochs',
+                      action='store',
+                      dest='epochs',
+                      type=int,
+                      default=20,
+                      help='number of epochs',)
+    
     parser.add_option('-t', '--test',
                       action='store_true',
                       dest='test',
                       default=False,
                       help='Use subset of dataset',)
+
+    parser.add_option('-r', '--restore',
+                      action='store_true',
+                      dest='restore',
+                      default=False,
+                      help='Restore from latest weights',)
    
     (options, _) = parser.parse_args()
     return options
@@ -29,6 +43,10 @@ def my_print(string, level=2, verbose=0):
         print(string)
 
 import numpy as np
+
+def get_all_dirs(path):
+    dirs = [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+    return dirs
 
 def get_my_print(verbose):
     """
