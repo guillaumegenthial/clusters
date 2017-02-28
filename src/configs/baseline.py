@@ -17,7 +17,7 @@ dev_size = 0.1
 test_size = 0.2
 max_eta = 0.5
 min_energy = 20
-featurized = False
+featurized = True
 
 # features
 tops = 2
@@ -37,12 +37,9 @@ lr = 0.001
 reg = 0.01
 n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
-selection = "f1"
-f1_mode = "weighted"
+selection = "acc"
+f1_mode = "micro"
 layers = [
     Dropout(name="drop1"), 
-    FullyConnected(10, name="fc1"),
-    ReLu(),
-    Dropout(name="drop2"), 
-    FullyConnected(output_size, name="fc2")
+    FullyConnected(output_size, name="fc1"),
     ]

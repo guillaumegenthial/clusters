@@ -43,7 +43,7 @@ def export_matrices(matrices, path="plots/", suffix="", vmin=-50, vmax=1000):
                 plt.imshow(m, interpolation='nearest', cmap="bwr")
                 plt.colorbar()
                 plt.grid(True)
-                plt.savefig(path+"layer_{}{}.png".format(i_, suffix))
+                plt.savefig(path+"layer_{}_{}{}.png".format(i_, mode_, suffix))
                 plt.close()
                 del m
 

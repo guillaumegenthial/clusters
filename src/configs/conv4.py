@@ -46,10 +46,19 @@ n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
 f1_mode = "micro"
+# model
 layers = [
-    Flatten(name="flat_input"),
-    FullyConnected(100, name="fc1"),
+    Conv2d(3, 3, n_features, 100, name="conv1"),
+    ReLu(),
+    Conv2d(3, 3, 100, 200, name="conv2"),
+    ReLu(),
+    MaxPool(name="pool1"),
+    Conv2d(3, 3, 200, 100, name="conv3"),
+    ReLu(),
+    Flatten(),
+    FullyConnected(1000, name="fc1"),
     ReLu(),
     Dropout(),
     FullyConnected(output_size, name="fc2"),
     ]
+

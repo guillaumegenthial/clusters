@@ -37,6 +37,7 @@ n_eta = layer_extractors.values()[0].n_eta
 n_features = n_layers * len(modes)
 
 # model
+restore = False
 output_path = None
 dropout = 1.0
 lr = 0.001
@@ -44,7 +45,7 @@ reg = 0.01
 n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
-f1_mode = "weighted"
+f1_mode = "micro"
 # model
 layers = [
     Conv2d(5, 5, n_features, 100, name="conv1"),

@@ -17,7 +17,6 @@ dev_size = 0.1
 test_size = 0.2
 max_eta = 0.5
 min_energy = 20
-modes = ["e", "vol"]
 featurized = True
 
 # features
@@ -38,6 +37,7 @@ n_eta = layer_extractors.values()[0].n_eta
 n_features = n_layers * len(modes)
 
 # model
+restore = False
 output_path = None
 dropout = 1.0
 lr = 0.001
@@ -45,16 +45,16 @@ reg = 0.01
 n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
-f1_mode = "weighted"
+f1_mode = "micro"
 layers = [
     Flatten(name="flat_input"),
-    FullyConnected(5000, name="fc1"),
-    ReLu(),
-    Dropout(),
     FullyConnected(1000, name="fc1"),
     ReLu(),
     Dropout(),
     FullyConnected(100, name="fc1"),
+    ReLu(),
+    Dropout(),
+    FullyConnected(50, name="fc1"),
     ReLu(),
     Dropout(),
     FullyConnected(output_size, name="fc2"),

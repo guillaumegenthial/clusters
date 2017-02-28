@@ -190,7 +190,7 @@ def load_and_preprocess_data(config, featurizer, preprocess=None):
         test_ = extract_data(test_raw, featurizer)
 
     else:
-        print "Warning: loading featurized data, test_raw = None"
+        print "Warning: loading featurized data, test_raw = test"
         data = load_data_featurized(config, featurizer)
         train_, test_, dev_ = split_data(data, config.dev_size, config.test_size)
         test_raw = copy.deepcopy(test_)

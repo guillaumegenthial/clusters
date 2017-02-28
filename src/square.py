@@ -9,11 +9,18 @@ from core.models.inputs import SquareInput
 from core.utils.evaluate_utils import featurized_export_result
 
 
-# import config
+# load config
 options = args()
 config = importlib.import_module("configs."+options.config)
 if options.test:
     config.max_events = 10
+    config.n_epochs = 2
+
+if options.restore:
+    config.restore = True
+
+if options.epochs != 20:
+    config.n_epochs = options.epochs
 
 # data featurizers
 extractor = config.extractor
