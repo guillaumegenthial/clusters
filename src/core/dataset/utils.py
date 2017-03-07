@@ -27,7 +27,7 @@ def get_leadjet(entry):
     # print leadjet[0], leadjet[1], leadjet[2], leadjet[3]
     return leadjet
 
-def get_leadjets(entry, min_energy=20, max_eta=1):
+def get_leadjets(entry, min_pt=20, max_pt=2000, min_eta=0, max_eta=1):
     """
     Returns a list of ROOT 4d vector corresponding to the leadjets,
 
@@ -42,7 +42,9 @@ def get_leadjets(entry, min_energy=20, max_eta=1):
     """
     leadjets = []
     for j in range(entry.NJets):
-        if (entry.JetsPt[j] > min_energy and abs(entry.JetsEta[j]) < max_eta):
+        if ((max_pt > entry.JetsPt[j] > min_pt) and 
+            (min_eta < abs(entry.JetsEta[j]) < max_eta)):
+        
             jet = ROOT.TLorentzVector()
             jet.SetPtEtaPhiM(entry.JetsPt[j], entry.JetsEta[j],
                              entry.JetsPhi[j], entry.JetsPM[j])
@@ -92,14 +94,12 @@ def get_cells(mytree):
         dep = mytree.Cell_dep[j] # cal layer
         e = mytree.Cell_E[j] # energy deposited in the cell
         vol = mytree.Cell_vol[j] # volume
-        e_density = density(e, vol)
         
         barcodes = mytree.Cell_barcodes
         # print len(barcodes) # prints 0
         # print mytree.Cell_barcodes
         # print("{}, {}, {}, {}".format(cell_eta, cell_phi, cell_dep, cell_vol))
-        cells[uid] = {"eta": eta, "phi": phi, 
-             "dep": dep, "e": e, "vol": vol, "e_density": e_density}
+        cells[uid] = {"eta": eta, "phi": phi,  "dep": dep, "e": e, "vol": vol}
 
     return cells
 
@@ -145,11 +145,13 @@ def topo_cluster_in_jet(leadjet, mytree, j):
     Returns:
         True if topo cluster in a 0.4 of leadjet
     """
-    topovec = ROOT.TLorentzVector()
-    topovec.SetPtEtaPhiM(mytree.Topocluster_E[j]/np.cosh(mytree.Topocluster_eta[j]),
-        mytree.Topocluster_eta[j],mytree.Topocluster_phi[j],0.)
+    topovec  = ROOT.TLorentzVector()
+    topo_eta = mytree.Topocluster_eta[j]
+    topo_phi = mytree.Topocluster_phi[j]
+    topo_pt  = mytree.Topocluster_E[j]/np.cosh(mytree.Topocluster_eta[j])
+    topovec.SetPtEtaPhiM(topo_pt, topo_eta, topo_phi, 0.)
     # only take the clusters inside the highest pT jet!
-    return leadjet.DeltaR(topovec) < 0.4
+    return leadjet.DeltaR(topovec) < 0.4, (topo_pt, topo_eta, topo_phi)
 
 def topo_cluster_in_jets(leadjets, mytree, j):
     """
@@ -165,9 +167,11 @@ def topo_cluster_in_jets(leadjets, mytree, j):
         boolean
     """
     for leadjet in leadjets:
-        if topo_cluster_in_jet(leadjet, mytree, j):
-            return True
-    return False
+        is_in_jet, jet = topo_cluster_in_jet(leadjet, mytree, j)
+        if is_in_jet:
+            return jet
+    # default
+    return (0, 0, 0)
 
 def map_cells(cells, cell_ids):
     """

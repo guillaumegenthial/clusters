@@ -26,7 +26,6 @@ preprocess = make_preprocess(preprocess_x, preprocess_y)
 train_examples, dev_set, test_set, test_raw = load_and_preprocess_data(
                             config, featurizer, preprocess)
 
-
 # model
 model = FlatInput(config, config.input_size)
 model.build()

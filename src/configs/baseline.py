@@ -6,18 +6,27 @@ from core.models.layer import FullyConnected, Dropout, Flatten, \
 # general
 exp_name = "baseline"
 
-# data
+# general data
 data_path = "data/ntuple_v3_2000k.root"
-data_verbosity = 2
 max_events = 500
 export_data_path = "data/ntuple_v3"
 tree_name = "SimpleJet"
 batch_size = 20
 dev_size = 0.1
 test_size = 0.2
-max_eta = 0.5
-min_energy = 20
 featurized = False
+
+# prop data
+jet_filter = False 
+jet_min_pt = 20 
+jet_max_pt = 2000 
+jet_min_eta = 0 
+jet_max_eta = 1  
+topo_filter = False 
+topo_min_pt = 0 
+topo_max_pt = 5 
+topo_min_eta = 0 
+topo_max_eta = 0.5
 
 # features
 tops = 2

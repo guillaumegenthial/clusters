@@ -13,6 +13,7 @@ from general import check_dir
 import warnings
 from sklearn.metrics.classification import UndefinedMetricWarning
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 def f1score(*args, **kwargs):
     return f1_score(*args, **kwargs)

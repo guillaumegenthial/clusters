@@ -15,9 +15,19 @@ tree_name = "SimpleJet"
 batch_size = 20
 dev_size = 0.1
 test_size = 0.2
-max_eta = 0.5
-min_energy = 20
 featurized = True
+
+# prop data
+jet_filter = False 
+jet_min_pt = 20 
+jet_max_pt = 2000 
+jet_min_eta = 0 
+jet_max_eta = 1  
+topo_filter = False 
+topo_min_pt = 0 
+topo_max_pt = 5 
+topo_min_eta = 0 
+topo_max_eta = 0.5
 
 # features
 tops = 2

@@ -50,10 +50,12 @@ def load_data_raw_it(config):
     """
     It version of load_data_raw that yields raw data for each example
     """
-    from core.dataset.dataset import Dataset
-    data = Dataset(path=config.data_path, tree=config.tree_name, 
-                   max_iter=config.max_events, verbose=config.data_verbosity,
-                   max_eta=config.max_eta, min_energy=config.min_energy)
+    from core.dataset.root import DatasetRoot
+    data = DatasetRoot(path=config.data_path, tree=config.tree_name, 
+        jet_filter=config.jet_filter, jet_min_pt=config.jet_min_pt, 
+        jet_max_pt=config.jet_max_pt, jet_min_eta=config.jet_min_eta, jet_max_eta=config.jet_max_eta,  
+        topo_filter=config.topo_filter, topo_min_pt=config.topo_min_pt, topo_max_pt=config.topo_max_pt, 
+        topo_min_eta=config.topo_min_eta, topo_max_eta=config.topo_max_eta)
     return data
 
 def load_data_featurized(config, featurizer=None):

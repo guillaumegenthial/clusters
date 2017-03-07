@@ -71,23 +71,31 @@ def get_all_dirs(path):
     dirs = [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
     return dirs
 
-def pickle_dump(obj, path):
+def get_all_files(path):
+    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    return files
+
+def pickle_dump(obj, path, verbose=True):
     """
     Dump obj in path with pickle highest protocol
     """
-    print "Dumping in file {}".format(path)
+    if verbose:
+        print "Dumping in file {}".format(path)
     with open(path, "wb") as f:
         pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
-    print "- done."
+    if verbose:
+        print "- done."
 
-def pickle_load(path):
+def pickle_load(path, verbose=True):
     """
     Load obj in path
     """
-    print "Loading from file {}".format(path)
+    if verbose:
+        print "Loading from file {}".format(path)
     with open(path, "rb") as f:
         return pickle.load(f)
-    print "- done."
+    if verbose:
+        print "- done."
 
 def check_dir(path):
     """
