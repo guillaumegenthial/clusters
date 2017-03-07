@@ -1,5 +1,5 @@
 import numpy as np
-from core.utils.features_utils import LayerExtractor
+from core.features.layers import LayerExtractor
 from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
 
@@ -17,7 +17,7 @@ dev_size = 0.1
 test_size = 0.2
 max_eta = 0.5
 min_energy = 20
-featurized = True
+featurized = False
 
 # features
 tops = 2

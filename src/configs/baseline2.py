@@ -1,5 +1,5 @@
 import numpy as np
-from core.utils.features_utils import LayerExtractor
+from core.features.layers import LayerExtractor
 from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
 

@@ -1,6 +1,6 @@
 import tensorflow as tf
 from model import Model
-from core.utils.tf_utils import xavier_weight_init, conv2d, \
+from core.utils.tf import xavier_weight_init, conv2d, \
         max_pool_2x2, weight_variable, bias_variable
 from layer import FullyConnected, Dropout, Embedding, Flatten
 

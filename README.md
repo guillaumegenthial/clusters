@@ -22,18 +22,31 @@ ROOT / Tensorflow
 - Fully connected network on simple features
 - Fully connected network on flattened np arrays
 - Convolutional layers on np arrays
+- rotation invariant extraction from embedding of cells
 
+## Test
+
+Add flag -t
+
+```
+python simple.py -t
+``` 
 
 ## Run
 
 - for simple features, with `config` being the name of the config file in `/configs/`
 
 ```
-python flat.py -c config
+python simple.py -c config
 ```
 
-- for np array input
+- for layers features (stack of arrays for each layer)
 
 ```
-python square.py -c fc_simple
+python layers.py -c config
+```
+
+- for embeddings
+```
+python embeddings.py -c config
 ```

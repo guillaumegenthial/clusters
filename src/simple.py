@@ -1,28 +1,20 @@
-import numpy as np
 import importlib
-from core.utils.preprocess_utils import  default_preprocess, \
-    load_and_preprocess_data, no_preprocess, one_hot, export_data, \
-    make_preprocess, load_data_raw_it, extract_data_it, it_to_list, \
-    max_y
-from core.utils.features_utils import simple_features, Extractor
-from core.utils.general_utils import args
+import numpy as np
+from core.utils.preprocess import  default_preprocess, max_y, \
+    no_preprocess, one_hot, make_preprocess
+from core.utils.data import load_and_preprocess_data, \
+    load_data_raw_it, extract_data_it, it_to_list, export_data
+from core.features.simple import simple_features
+from core.utils.general import args, apply_options
 from core.models.inputs import FlatInput
 from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
-from core.utils.evaluate_utils import raw_export_result
+from core.utils.evaluate import raw_export_result
 
 # load config
-options = args()
+options = args("baseline")
 config = importlib.import_module("configs."+options.config)
-if options.test:
-    config.max_events = 10
-    config.n_epochs = 2
-
-if options.restore:
-    config.restore = True
-
-if options.epochs != 20:
-    config.n_epochs = options.epochs
+config = apply_options(config, options)
 
 # data featurizer
 featurizer, _ = simple_features(config.tops, config.feature_mode)

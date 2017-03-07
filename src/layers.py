@@ -1,26 +1,18 @@
 import importlib
-from core.utils.preprocess_utils import  default_preprocess, \
-    load_and_preprocess_data, no_preprocess, one_hot, export_data, \
-    max_y, load_data_featurized
-from core.utils.features_utils import simple_features, Extractor, \
-    wrap_extractor, extractor_default_preprocess, extractor_post_process
-from core.utils.general_utils import args
+from core.utils.preprocess import default_preprocess, \
+    no_preprocess, one_hot, max_y 
+from core.utils.data import load_and_preprocess_data, export_data
+from core.features.layers import Extractor, wrap_extractor, \
+    extractor_default_preprocess, extractor_post_process
+from core.utils.general import args, apply_options
 from core.models.inputs import SquareInput
-from core.utils.evaluate_utils import featurized_export_result
+from core.utils.evaluate import featurized_export_result
 
 
 # load config
-options = args()
+options = args("fc")
 config = importlib.import_module("configs."+options.config)
-if options.test:
-    config.max_events = 10
-    config.n_epochs = 2
-
-if options.restore:
-    config.restore = True
-
-if options.epochs != 20:
-    config.n_epochs = options.epochs
+config = apply_options(config, options)
 
 # data featurizers
 extractor = config.extractor

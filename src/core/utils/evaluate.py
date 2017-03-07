@@ -6,13 +6,16 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, f1_score, \
     precision_score, recall_score
-from features_utils import Extractor
-from general_utils import check_dir
+from core.features.layers import Extractor
+from general import check_dir
 
 # deactivate undefined metric warning from sklearn
 import warnings
 from sklearn.metrics.classification import UndefinedMetricWarning
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
+
+def f1score(*args, **kwargs):
+    return f1_score(*args, **kwargs)
 
 
 def baseline(y, target=1):

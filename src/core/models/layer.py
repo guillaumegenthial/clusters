@@ -1,7 +1,7 @@
 import tensorflow as tf
 from math import ceil
 from model import Model
-from core.utils.tf_utils import xavier_weight_init, conv2d, \
+from core.utils.tf import xavier_weight_init, conv2d, \
         max_pool_2x2, weight_variable, bias_variable
 
 

@@ -4,13 +4,40 @@ import time
 import numpy as np
 import cPickle as pickle
 from optparse import OptionParser
+import numpy as np
 
-def args():
+def apply_options(config, options):
+    """
+    Args:
+        config (module) with parameters
+        options : returned by args
+    Returns:
+        config module
+    """
+    if options.test:
+        config.max_events = 10
+        config.n_epochs = 2
+    if options.restore:
+        config.restore = True
+    if options.epochs != 20:
+        config.n_epochs = options.epochs
+
+    return config
+
+
+def args(default):
+    """
+    Parses input from command line
+    Args:
+        default (string): default name of config file
+    Returns:
+        options
+    """
     parser = OptionParser(usage='usage: %prog [options] ')
     parser.add_option('-c', '--config',
                       action='store',
                       dest='config',
-                      default='baseline',
+                      default=default,
                       help='config file',)
 
     parser.add_option('-e', '--epochs',
@@ -33,40 +60,40 @@ def args():
                       help='Restore from latest weights',)
    
     (options, _) = parser.parse_args()
+
+
     return options
 
-def my_print(string, level=2, verbose=0):
-    """
-    Prints string if level >= verbose
-    """
-    if level >= verbose:
-        print(string)
-
-import numpy as np
-
 def get_all_dirs(path):
+    """
+    Return a list of string of all dir name in path
+    """
     dirs = [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
     return dirs
 
-def get_my_print(verbose):
-    """
-    Returns lambda function to print with given verbose level
-    """
-    return lambda s, l=2: my_print(s, l, verbose)
-
 def pickle_dump(obj, path):
+    """
+    Dump obj in path with pickle highest protocol
+    """
     print "Dumping in file {}".format(path)
     with open(path, "wb") as f:
         pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
     print "- done."
 
 def pickle_load(path):
+    """
+    Load obj in path
+    """
     print "Loading from file {}".format(path)
     with open(path, "rb") as f:
         return pickle.load(f)
     print "- done."
 
 def check_dir(path):
+    """
+    Check if path exists
+    if not, creates it
+    """
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -75,6 +102,7 @@ class Progbar(object):
     """
     Progbar class copied from keras (https://github.com/fchollet/keras/)
     Displays a progress bar.
+    Small edit : added strict arg to update
     # Arguments
         target: Total number of steps expected.
         interval: Minimum visual progress update interval (in seconds).

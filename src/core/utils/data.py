@@ -4,7 +4,7 @@ import os
 import copy
 import numpy as np
 import pickle
-from general_utils import pickle_dump, pickle_load, Progbar
+from general import pickle_dump, pickle_load, Progbar
 
 
 def minibatches(data, minibatch_size, shuffle=True):
@@ -50,7 +50,7 @@ def load_data_raw_it(config):
     """
     It version of load_data_raw that yields raw data for each example
     """
-    from dataset import Dataset
+    from core.dataset.dataset import Dataset
     data = Dataset(path=config.data_path, tree=config.tree_name, 
                    max_iter=config.max_events, verbose=config.data_verbosity,
                    max_eta=config.max_eta, min_energy=config.min_energy)
@@ -144,21 +144,6 @@ def extract_data_it(data, featurizer=lambda x: x):
         y = d["nparts"]
         yield (x, y), i
 
-def make_preprocess(preprocess_x, preprocess_y):
-    """
-    Preprocess data
-    Args:
-        data: list of tuples (x, y)
-    Returns:
-        list of tuples (x, y)
-    """
-    def f(data):
-        x, y = zip(*data)
-        x = preprocess_x(x)
-        y = preprocess_y(y)
-        return zip(x, y)
-        
-    return f
 
 def load_and_preprocess_data(config, featurizer, preprocess=None):
     """
@@ -230,103 +215,3 @@ def export_data(data, modes, path):
             feat = ", ".join(map(str, x))
             feat += ", " + str(y) + "\n"
             f.write(feat)
-
-def one_hot(output_size):
-    """
-    Takes a label y an return a one-hot vector
-    """
-    def f(y):
-        y = np.asarray([min(y_, output_size-1) for y_ in y])
-        one_hot = np.zeros((y.size, output_size))
-        one_hot[np.arange(y.size), y] = 1
-        return one_hot
-    return f
-
-def max_y(output_size):
-    def f(y):
-        y = np.asarray([min(y_, output_size-1) for y_ in y])
-        return y
-    return f
-
-def default_preprocess(X):
-    """
-    Preprocess X by mean substracting and normalization
-    Args:
-        X: (np array) of shape (nsamples, nfeatures)
-    Returns:
-        X: (np array) (X - m) / sigma
-    """
-    X = mean_substraction(X)
-    X = normalization(X)
-    return X
-
-def default_post_process(X, Y):
-    return np.asarray(X), np.asarray(Y)
-
-def no_preprocess(X):
-    return X
-
-def scale_preprocess(scale):
-    return lambda X: X/float(scale)
-
-def mean(X):
-    return np.mean(X, axis=0, keepdims=True)
-
-def sigma(X):
-    return np.sqrt(np.var(X, axis=0, keepdims=True))
-
-def mean_substraction(X):
-    """
-    Substracts mean to a sample X
-    Args:
-        X: np array of shape (nsamples, nfeatures)
-    Returns:
-        X - mean(X)
-    """
-
-    X -= mean(X)
-    return X
-
-def normalization(X):
-    """
-    Divides X by its standard deviation
-    Args:
-        X: np array of shape (nsamples, nfeatures)
-    Returns:
-        X / np.sqrt(np.var(X))
-    """
-    eps = 10^(-6)
-    X /= (sigma(X) + eps)
-    return X
-
-
-def pad_sequences(sequences, max_length, pad_tok):
-    """
-    Args:
-        sequences: generator of sequences (list) of different length
-        max_length: (int) max length of sequence
-        pad_tok: same element as a sequence element
-    Returns:
-        np array of size [n_sequences, max_length, len(pad_took)]
-    """
-    result = []
-    for seq in sequences:
-        res_ = seq[:max_length] + [pad_tok]*max(max_length - len(seq), 0)
-        result +=  [res_]
-    result = np.array(result)
-    return result
-
-def pad_post_process(max_length, id_tok, feat_tok, output_size):
-    def f(X, Y):
-        ids      = [x_["ids"] for x_ in X]
-        features = [x_["features"] for x_ in X]
-
-        ids_pad  = pad_sequences(ids, max_length, id_tok)
-        feat_pad = pad_sequences(features, max_length, feat_tok)
-
-        return [ids_pad, feat_pad], np.minimum(Y, output_size-1)
-
-    return f
-
-
-

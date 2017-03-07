@@ -4,16 +4,14 @@ import time
 import os
 import logging
 from shutil import copyfile
-from sklearn.metrics import f1_score
 from datetime import datetime
-from core.utils.tf_utils import xavier_weight_init, conv2d, \
+from core.utils.tf import xavier_weight_init, conv2d, \
                 max_pool_2x2, weight_variable, bias_variable
-from core.utils.general_utils import  Progbar, check_dir, get_all_dirs
-from core.utils.preprocess_utils import minibatches, \
-                default_post_process
-from core.utils.features_utils import Extractor
-from core.utils.evaluate_utils import raw_export_result, baseline, \
-    outputConfusionMatrix, outputF1Score, dump_results
+from core.utils.general import  Progbar, check_dir, get_all_dirs
+from core.utils.preprocess import default_post_process
+from core.utils.data import minibatches
+from core.utils.evaluate import raw_export_result, baseline, \
+    outputConfusionMatrix, outputF1Score, dump_results, f1score
 
 logger = logging.getLogger('logger')
 logger.setLevel(logging.DEBUG)
@@ -166,7 +164,7 @@ class Model(object):
         dev_x, dev_y = post_process(dev_x, dev_y)
         fd = self.get_feed_dict(dev_x, 1.0, dev_y)
         acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
-        dev_f1 = f1_score(dev_y, lab, labels=range(self.config.output_size), average=self.config.f1_mode)
+        dev_f1 = f1score(dev_y, lab, labels=range(self.config.output_size), average=self.config.f1_mode)
         logger.info("- dev acc: {:04.2f} (baseline {:04.2f}) f1: {:04.2f} (baseline {:04.2f})".format(
             acc * 100.0, dev_baseline * 100.0, dev_f1 * 100.0, dev_baseline_f1*100.0))
         return acc, dev_f1
@@ -182,7 +180,7 @@ class Model(object):
         best_score = 0
         dev_y = zip(*dev_set)[1]
         dev_baseline = baseline(dev_y)
-        dev_baseline_f1 = f1_score(dev_y, np.ones(len(dev_y)), 
+        dev_baseline_f1 = f1score(dev_y, np.ones(len(dev_y)), 
             labels=range(self.config.output_size), average=self.config.f1_mode)
 
         saver = tf.train.Saver()
@@ -220,7 +218,7 @@ class Model(object):
         test_x, test_y = zip(*test_set)
         test_x, test_y = post_process(test_x, test_y)
 
-        test_baseline_f1 = f1_score(test_y, np.ones(len(test_y)), 
+        test_baseline_f1 = f1score(test_y, np.ones(len(test_y)), 
             labels=range(self.config.output_size), average=self.config.f1_mode)
         test_baseline = baseline(test_y)
 
@@ -232,7 +230,7 @@ class Model(object):
             fd = self.get_feed_dict(test_x, 1.0, test_y)
             acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
 
-            test_f1 = f1_score(test_y, lab, labels=range(self.config.output_size), average=self.config.f1_mode)
+            test_f1 = f1score(test_y, lab, labels=range(self.config.output_size), average=self.config.f1_mode)
 
             logger.info("- test acc: {:.4} (baseline {:.4}) f1: {:.4} (baseline {:.4})".format(
             acc * 100.0, test_baseline * 100.0, test_f1 * 100.0, test_baseline_f1*100.0))

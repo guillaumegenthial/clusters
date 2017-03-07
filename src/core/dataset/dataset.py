@@ -1,12 +1,10 @@
 import ROOT
 import numpy as np
 import time
-from data_utils import get_leadjets, \
+from utils import get_leadjets, \
     get_cells, get_truth_parts, topo_cluster_in_jets, \
     map_cells, nb_of_truth_parts, map_truth_parts, \
     get_tracks
-
-from general_utils import get_my_print
 
 
 class Dataset(object):
@@ -16,7 +14,6 @@ class Dataset(object):
         self.myfile = ROOT.TFile(path)
         self.mytree = self.myfile.Get(tree)
         self.max_iter = max_iter
-        self.my_print = get_my_print(verbose)
         self.length = None
         self.max_eta = max_eta
         self.min_energy = min_energy
@@ -34,9 +31,6 @@ class Dataset(object):
 
         for i in range(nb_iter):
             mytree.GetEntry(i)
-
-            if (i%100==0):
-                self.my_print("Entry {}, NJets {}".format(i, mytree.NJets), 1)
 
             leadjets    = get_leadjets(mytree, min_energy=self.min_energy, 
                                         max_eta=self.max_eta)
