@@ -138,7 +138,7 @@ class Model(object):
         saver.save(sess, self.config.model_output)
 
 
-    def run_epoch(self, sess, epoch, train_examples, dev_set, dev_baseline, dev_baseline_f1, post_process):
+    def run_epoch(self, sess, epoch, train_examples, dev_set, dev_baseline, dev_baseline_f1, post_process=None):
         """
         Run one epoch of training
         Args:
@@ -155,7 +155,8 @@ class Model(object):
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, 
                                                 self.config.batch_size)):
 
-            train_x, train_y = post_process(train_x, train_y)
+            if post_process is not None:
+                train_x, train_y = post_process(train_x, train_y)
             fd = self.get_feed_dict(train_x, self.config.dropout, train_y)
             _, train_loss = sess.run([self.train_op, self.loss], feed_dict=fd)
             prog.update(i + 1, [("train loss", train_loss)])

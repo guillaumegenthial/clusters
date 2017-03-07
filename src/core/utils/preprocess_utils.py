@@ -120,7 +120,7 @@ def split_data(data, dev=0.1, test=0.2):
     return train_, dev_, test_
 
 
-def extract_data(data, extractor=lambda x: x):
+def extract_data(data, featurizer=lambda x: x):
     """
     Extract data with feature_extractor
     Args:
@@ -128,7 +128,7 @@ def extract_data(data, extractor=lambda x: x):
     Returns:
         list of (x, y)
     """
-    return [(extractor(d), d["nparts"]) for d in data]
+    return [(featurizer(d), d["nparts"]) for d in data]
 
 def extract_data_it(data, featurizer=lambda x: x):
     """
@@ -186,8 +186,8 @@ def load_and_preprocess_data(config, featurizer, preprocess=None):
         train_raw, dev_raw, test_raw = split_data(data, config.dev_size, config.test_size)
 
         train_ = extract_data(train_raw, featurizer)
-        dev_ = extract_data(dev_raw, featurizer)
-        test_ = extract_data(test_raw, featurizer)
+        dev_   = extract_data(dev_raw, featurizer)
+        test_  = extract_data(test_raw, featurizer)
 
     else:
         print "Warning: loading featurized data, test_raw = test"
@@ -298,3 +298,35 @@ def normalization(X):
     eps = 10^(-6)
     X /= (sigma(X) + eps)
     return X
+
+
+def pad_sequences(sequences, max_length, pad_tok):
+    """
+    Args:
+        sequences: generator of sequences (list) of different length
+        max_length: (int) max length of sequence
+        pad_tok: same element as a sequence element
+    Returns:
+        np array of size [n_sequences, max_length, len(pad_took)]
+    """
+    result = []
+    for seq in sequences:
+        res_ = seq[:max_length] + [pad_tok]*max(max_length - len(seq), 0)
+        result +=  [res_]
+    result = np.array(result)
+    return result
+
+def pad_post_process(max_length, id_tok, feat_tok, output_size):
+    def f(X, Y):
+        ids      = [x_["ids"] for x_ in X]
+        features = [x_["features"] for x_ in X]
+
+        ids_pad  = pad_sequences(ids, max_length, id_tok)
+        feat_pad = pad_sequences(features, max_length, feat_tok)
+
+        return [ids_pad, feat_pad], np.minimum(Y, output_size-1)
+
+    return f
+
+
+

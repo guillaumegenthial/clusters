@@ -133,5 +133,19 @@ class MaxPool(Layer):
 
         self.output_shape = self.input_shape[:1] + [out_height, out_width] + self.input_shape[3:]
 
+class Embedding(Layer):
+    def __init__(self, vocab_size, embedding_size, name=None):
+        Layer.__init__(self, name)
+        self.vocab_size = vocab_size
+        self.embedding_size = embedding_size
+
+    def __call__(self, inputs):
+        with tf.variable_scope(self.name):
+            L = weight_variable('L', [self.vocab_size, self.embedding_size])
+        return tf.nn.embedding_lookup(L, inputs, name="embeddings")
+
+    def update_param(self):
+        self.output_shape = self.input_shape[:1] + [self.embedding_size]
+
 
 

@@ -92,15 +92,22 @@ def get_cells(mytree):
         dep = mytree.Cell_dep[j] # cal layer
         e = mytree.Cell_E[j] # energy deposited in the cell
         vol = mytree.Cell_vol[j] # volume
+        e_density = density(e, vol)
         
         barcodes = mytree.Cell_barcodes
         # print len(barcodes) # prints 0
         # print mytree.Cell_barcodes
         # print("{}, {}, {}, {}".format(cell_eta, cell_phi, cell_dep, cell_vol))
         cells[uid] = {"eta": eta, "phi": phi, 
-             "dep": dep, "e": e, "vol": vol}
+             "dep": dep, "e": e, "vol": vol, "e_density": e_density}
 
     return cells
+
+def density(e, vol):
+    if vol == 0:
+        return 0.0
+    else:
+        return (float(e)/float(vol))
 
 def get_tracks(mytree):
     """
