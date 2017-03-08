@@ -2,7 +2,7 @@ from core.utils.general import Progbar
 import numpy as np
 
 
-def get_default_processing(data, output_size):
+def get_default_processing(data, processing_y):
     """
     Compute statistics over data and outputs a function
     Args:
@@ -35,7 +35,7 @@ def get_default_processing(data, output_size):
     data.length = n_examples
     print "- done."
 
-    return lambda x, y: ((x - m)/s, np.minimum(y, output_size-1))
+    return lambda x, y: ((x - m)/s, processing_y(y))
 
 
 def simple_features(tops=5, mode=3):

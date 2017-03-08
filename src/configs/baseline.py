@@ -1,5 +1,5 @@
 import numpy as np
-from core.features.layers import LayerExtractor
+from core.features.layers import LayerExtractor, Extractor
 from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
 
@@ -11,7 +11,7 @@ path = "data/events"
 train_files = "data/config/train.txt"
 dev_files = "data/config/dev.txt"
 test_files = "data/config/test.txt"
-max_iter = 500
+max_iter = 50
 shuffle = True
 dev_size = 0.1
 test_size = 0.2
@@ -33,10 +33,12 @@ tops = 5
 feature_mode = 3
 input_size = 24
 output_size = 3
-output_sizes = range(3, 5)
 layer_extractors = dict()
 for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
+
+modes = ["e", "vol"]
+extractor = Extractor(layer_extractors, modes)
 
 # model
 batch_size = 20

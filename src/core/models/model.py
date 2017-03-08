@@ -8,8 +8,7 @@ from datetime import datetime
 from core.utils.tf import xavier_weight_init, conv2d, \
                 max_pool_2x2, weight_variable, bias_variable
 from core.utils.general import  Progbar, check_dir, get_all_dirs
-from core.utils.preprocess import default_post_process
-from core.utils.data import minibatches
+from core.utils.data import minibatches, get_xy
 from core.utils.evaluate import raw_export_result, baseline, \
     outputConfusionMatrix, outputF1Score, dump_results, f1score
 
@@ -135,6 +134,16 @@ class Model(object):
             os.makedirs(path)
         saver.save(sess, self.config.model_output)
 
+    def run_baseline(self, test_set, processing=None):
+        test_x, test_y = get_xy(test_set)
+        if processing is not None:
+            test_x, test_y = processing(test_x, test_y)
+
+        base_f1 = f1score(test_y, np.ones(len(test_y)), 
+            labels=range(self.config.output_size), average=self.config.f1_mode)
+        base_acc = baseline(test_y)
+        return base_acc, base_f1
+
     def run_evaluate(self, sess, test_set, base_acc, base_f1, processing=None):
         """
         Computes evaluation over a test set an log it
@@ -161,7 +170,7 @@ class Model(object):
 
         return acc, f1, ys, labs
 
-    def run_epoch(self, sess, epoch, train_examples, dev_set, dev_baseline, dev_baseline_f1, post_process=None):
+    def run_epoch(self, sess, epoch, train_examples, dev_set, dev_baseline, dev_baseline_f1, processing=None):
         """
         Run one epoch of training
         Args:
@@ -178,8 +187,8 @@ class Model(object):
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, 
                                                 self.config.batch_size)):
 
-            if post_process is not None:
-                train_x, train_y = post_process(train_x, train_y)
+            if processing is not None:
+                train_x, train_y = processing(train_x, train_y)
 
             fd = self.get_feed_dict(train_x, self.config.dropout, train_y)
             _, train_loss = sess.run([self.train_op, self.loss], feed_dict=fd)
@@ -187,23 +196,24 @@ class Model(object):
 
         logger.info("Evaluating on dev set")
         
-        acc, dev_f1, _, _ = self.run_evaluate(sess, dev_set, dev_baseline, dev_baseline_f1, post_process)
+        acc, dev_f1, _, _ = self.run_evaluate(sess, dev_set, dev_baseline, dev_baseline_f1, processing)
 
         return acc, dev_f1
 
-    def train(self, train_examples, dev_set, post_process=default_post_process):
+    def train(self, train_examples, dev_set, processing=None):
         """
         Train model and saves param
         Args:
-            train_examples: (x, y) generator
-            dev_set: (x, y) generator
-            dev_baseline: float, acc from baseline
+            train_examples: data generator
+            dev_set: data generator
+            processing: function of batch tuples (X, Y)
+        Returns:
+            perform training operation on train_examples data with config
+            computes performance at each epoch and saves model if best
         """
         best_score = 0
-        dev_y = zip(*dev_set)[1]
-        dev_baseline = baseline(dev_y)
-        dev_baseline_f1 = f1score(dev_y, np.ones(len(dev_y)), 
-            labels=range(self.config.output_size), average=self.config.f1_mode)
+        
+        dev_base_acc, dev_base_f1 = self.run_baseline(dev_set, processing)
 
         saver = tf.train.Saver()
         self.export_config()
@@ -220,7 +230,7 @@ class Model(object):
 
             for epoch in range(self.config.n_epochs):
                 acc, dev_f1 = self.run_epoch(sess, epoch, train_examples, dev_set, 
-                    dev_baseline, dev_baseline_f1, post_process)
+                    dev_base_acc, dev_base_f1, processing)
 
                 score = dev_f1 if self.config.selection == "f1" else acc
                 if score > best_score:
@@ -229,22 +239,27 @@ class Model(object):
                     best_score = score
                     self.save(saver, sess, self.config.model_output)
 
-    def evaluate(self, test_set, post_process=default_post_process, test_raw=None, export_result=raw_export_result):
+    def evaluate(self, test_set, processing=None, test_raw=None, export_result=None):
         """
         Reload weights and test on test set
+        Args:
+            test_set: data generator
+            processing: function to apply to batch tuples (X, Y)
+            test_raw: data generator of raw data for export
+            export_result: f(config, logger, ys, labs, test_raw)
+        Return:
+            confusion matrix
+            f1 score of the baseline model
+            f1 score of the model
+            export plots of examples if test_raw and export result are defined
+            acc, test_base_acc: accuracy of the model, acc of the baseline
         """
         logger.info(80 * "=")
         logger.info("TESTING")
         logger.info(80 * "=")
         logger.info("Final evaluation on test set")
-        # test_x, test_y = zip(*test_set)
-        # test_x, test_y = post_process(test_x, test_y)
-
-        # test_baseline_f1 = f1score(test_y, np.ones(len(test_y)), 
-        #     labels=range(self.config.output_size), average=self.config.f1_mode)
-        # test_baseline = baseline(test_y)
-        test_baseline_f1 = 0
-        test_baseline = 0
+        
+        test_base_acc, test_base_f1 = self.run_baseline(test_set, processing)
 
         saver = tf.train.Saver()
         with tf.Session() as sess:
@@ -253,19 +268,19 @@ class Model(object):
             saver.restore(sess, self.config.model_output)
             
             acc, test_f1, ys, labs = self.run_evaluate(sess, test_set, 
-                                test_baseline, test_baseline_f1, post_process)
+                                test_base_acc, test_base_f1, processing)
 
             outputConfusionMatrix(ys, labs, self.config.output_size, self.config.confmatrix_output)
             outputF1Score(self.config, logger, ys, np.ones(len(ys)), "Baseline")
             logger.info("\n")
             outputF1Score(self.config, logger, ys, labs, "Model")
 
-            if test_raw is not None:
-                export_result(self.config, logger)(ys, labs, test_raw)
+            if test_raw is not None and export_result is not None:
+                export_result(self.config, logger, ys, labs, test_raw)
 
-        return acc, test_baseline
+        return acc, test_base_acc
 
-    def find_best_reg_value(self, reg_values, train_examples, dev_set, test_set, post_process=default_post_process):
+    def find_best_reg_value(self, reg_values, train_examples, dev_set, test_set, processing=None):
         """
         Train model for different values of reg
         Args:
@@ -278,7 +293,7 @@ class Model(object):
         for reg in reg_values:
             self.config.reg = reg
             self.train(train_examples, dev_set)
-            acc = self.evaluate(test_set, post_process=post_process)
+            acc = self.evaluate(test_set, processing=processing)
             result += [(reg, acc)]
 
         self.get_reg_summary(result)

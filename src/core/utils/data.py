@@ -40,6 +40,13 @@ def minibatches(data, minibatch_size, shuffle=True):
         if len(x_batch) != 0:
             yield x_batch, y_batch
 
+def get_xy(data):
+    """
+    Return the firt big batch
+    """
+    for result in  minibatches(data, 1000000, False):
+        return result
+
 
 def load_data_raw(config):
     """

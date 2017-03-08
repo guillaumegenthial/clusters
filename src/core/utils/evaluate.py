@@ -82,29 +82,28 @@ def raw_export_result(config, logger):
 
     return export_results
 
-def featurized_export_result(config, logger):
-
-    def export_results(tar, lab, test_raws=None):
-            """
-            Export confusion matrix
-            Export matrices for all pairs (tar, lab)
-            """
-            if test_raws is not None:
-                tar_lab_seen = set()
-                test_raw, _ = zip(*test_raws[0])
-                test_set, _ = zip(*test_raws[1])
-                for (t, l, d_, d) in zip(tar, lab, test_raw, test_set):
-                    if (t, l) not in tar_lab_seen:
-                        logger.info("- extracting layers for true label {}, pred {} in {}".format(
-                                                    t, l, config.plot_output))
-                        tar_lab_seen.add((t, l))
-                        path = config.plot_output + "true_{}_pred{}/".format(t, l)
-                        check_dir(path)
-                        export_matrices(d_, path, "_raw")
-                        export_matrices(d, path, "_preprocessed")
-                        
-
-    return export_results
+def featurized_export_result(config, logger, tar, lab, test_raw=None):
+    """
+    Export matrices for all pairs (tar, lab)
+    Args:
+        config: config file
+        logger: logging object
+        tar: true labels
+        lab: predicted labels
+        test_raw: featurized inputs
+    """
+    if test_raw is not None:
+        tar_lab_seen = set()
+        for (t, l, d) in zip(tar, lab, test_raw):
+            (x, y), _ = d
+            if (t, l) not in tar_lab_seen:
+                logger.info("- extracting layers for true label {}, pred {} in {}".format(
+                                            t, l, config.plot_output))
+                tar_lab_seen.add((t, l))
+                path = config.plot_output + "true_{}_pred{}/".format(t, l)
+                check_dir(path)
+                export_matrices(x, path, "_raw")
+                
 
 
 def dump_results(target, label, path):

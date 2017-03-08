@@ -28,11 +28,13 @@ def one_hot(output_size):
         return one_hot
     return f
 
+
 def max_y(output_size):
-    def f(y):
-        y = np.asarray([min(y_, output_size-1) for y_ in y])
-        return y
-    return f
+    """
+    Return function to apply to a batch of Y
+    """
+    return lambda y: np.minimum(y, output_size-1)
+
 
 def default_preprocess(X):
     """

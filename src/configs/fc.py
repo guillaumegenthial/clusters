@@ -6,16 +6,15 @@ from core.models.layer import FullyConnected, Dropout, Flatten, \
 # general
 exp_name = "plots_2k"
 
-# data
-data_path = "data/ntuple_v3_2000k.root"
-data_verbosity = 2
-max_events = 500
-export_data_path = "data/ntuple_v3_cnn"
-tree_name = "SimpleJet"
-batch_size = 20
+# general data
+path = "data/events"
+train_files = "data/config/train.txt"
+dev_files = "data/config/dev.txt"
+test_files = "data/config/test.txt"
+max_iter = 50
+shuffle = True
 dev_size = 0.1
 test_size = 0.2
-featurized = True
 
 # prop data
 jet_filter = False 
@@ -47,6 +46,7 @@ n_eta = layer_extractors.values()[0].n_eta
 n_features = n_layers * len(modes)
 
 # model
+batch_size = 20
 restore = False
 output_path = None
 dropout = 1.0

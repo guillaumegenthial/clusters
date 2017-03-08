@@ -1,4 +1,76 @@
+from core.utils.general import Progbar
 import numpy as np
+
+def get_default_processing(data, extractor, processing_y):
+    """
+    Compute statistics over data and outputs a function
+    Args:
+        data: (generator) of (x, y), i tuples
+    Returns:
+        function f(x, y) where x, y are batches of x and y
+    """
+    print "Creating processing function"
+    # prepare storage for statistics
+    eps = 10^(-6)
+    mean = dict()
+    var = dict()
+    counts = dict()
+    for dep, l_ext in extractor.layer_extractors.iteritems():
+            mean[dep] = dict()
+            var[dep] = dict()
+            counts[dep] = 0
+            for mode in extractor.modes:
+                mean[dep][mode] = np.zeros([l_ext.n_phi, l_ext.n_eta])
+                var[dep][mode] = np.zeros([l_ext.n_phi, l_ext.n_eta])
+
+    # get statistics
+    prog = Progbar(target=data.max_iter)
+    n_examples = 0
+    for (x, y), i in data:
+        n_examples += 1
+        prog.update(i)
+        for dep, modes_ in x.iteritems():
+            found = False
+            for mode, dat in modes_.iteritems():
+                if type(dat) != tuple:
+                    mean[dep][mode] += dat
+                    var[dep][mode] += dat**2
+                    found = True
+            if found:
+                counts[dep] += 1
+
+    data.length = n_examples
+    prog.update(i+1)
+
+    # compute statistics
+    for dep in mean.iterkeys():
+        counts_dep = counts[dep]
+        for mode in extractor.modes:
+            mean[dep][mode] /= counts_dep
+            var[dep][mode] /= counts_dep
+            var[dep][mode] -= (mean[dep][mode])**2
+
+    print "- done."
+
+    def f(X, Y):
+        result = []
+        # apply statistics
+        for x in X:
+            result_ = []
+            for dep, modes_ in x.iteritems():
+                for mode, dat in modes_.iteritems():
+                    if type(dat) != tuple:
+                        result_ += [(dat - mean[dep][mode]) / (np.sqrt(var[dep][mode]) + eps)]
+                    else:
+                        n_phi = extractor.layer_extractors[dep].n_phi
+                        n_eta = extractor.layer_extractors[dep].n_eta
+                        result_ += [(np.zeros([n_phi, n_eta]))]
+
+            result.append(result_)
+
+        return np.transpose(np.asarray(result), (0, 2, 3, 1)), processing_y(Y)
+
+    return f
 
 def wrap_extractor(extractor):
     def f(d_):
@@ -7,76 +79,6 @@ def wrap_extractor(extractor):
         topo_phi = d_["topo_phi"]
         matrices = extractor(cells, topo_eta, topo_phi)
         return matrices
-
-    return f
-
-def extractor_default_preprocess(extractor):
-
-    def f(data):
-        print "preprocessing..."
-        # prepare storage for statistics
-        eps = 10^(-6)
-        mean = dict()
-        var = dict()
-        counts = dict()
-        for dep, l_ext in extractor.layer_extractors.iteritems():
-                mean[dep] = dict()
-                var[dep] = dict()
-                counts[dep] = 0
-                for mode in extractor.modes:
-                    mean[dep][mode] = np.zeros([l_ext.n_phi, l_ext.n_eta])
-                    var[dep][mode] = np.zeros([l_ext.n_phi, l_ext.n_eta])
-
-        # get statistics
-        for x, y in data:
-            for dep, modes_ in x.iteritems():
-                found = False
-                for mode, dat in modes_.iteritems():
-                    if type(dat) != tuple:
-                        mean[dep][mode] += dat
-                        var[dep][mode] += dat**2
-                        found = True
-                if found:
-                    counts[dep] += 1
-
-        # compute statistics
-        for dep in mean.iterkeys():
-            counts_dep = counts[dep]
-            for mode in extractor.modes:
-                mean[dep][mode] /= counts_dep
-                var[dep][mode] /= counts_dep
-                var[dep][mode] -= (mean[dep][mode])**2
-
-        # apply statistics
-        for i in range(len(data)):
-            for dep, modes_ in data[i][0].iteritems():
-                for mode, dat in modes_.iteritems():
-                    if type(dat) != tuple:
-                        data[i][0][dep][mode] = (dat - mean[dep][mode]) / (np.sqrt(var[dep][mode]) + eps)
-
-        print "- done."
-        return data
-
-    return f
-
-
-def extractor_post_process(extractor, output_size):
-    def f(X, Y):
-        result = []
-        for x in X:
-            result_ = []
-            for dep, modes_ in x.iteritems():
-                for mode, dat in modes_.iteritems():
-                    if type(dat) != tuple:
-                        result_.append(dat)
-                    else:
-                        n_phi = extractor.layer_extractors[dep].n_phi
-                        n_eta = extractor.layer_extractors[dep].n_eta
-                        result_.append(np.zeros([n_phi, n_eta]))
-
-            result.append(result_)
-
-        return np.transpose(np.asarray(result), (0, 3, 2, 1)), np.minimum(Y, output_size-1)
 
     return f
 
