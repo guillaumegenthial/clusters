@@ -7,14 +7,14 @@ from core.models.layer import FullyConnected, Dropout, Flatten, \
 exp_name = "baseline"
 
 # general data
-data_path = "data/ntuple_v3_2000k.root"
-max_events = 500
-export_data_path = "data/ntuple_v3"
-tree_name = "SimpleJet"
-batch_size = 20
+path = "data/events"
+train_files = "data/config/train.txt"
+dev_files = "data/config/dev.txt"
+test_files = "data/config/test.txt"
+max_iter = 500
+shuffle = True
 dev_size = 0.1
 test_size = 0.2
-featurized = False
 
 # prop data
 jet_filter = False 
@@ -29,9 +29,9 @@ topo_min_eta = 0
 topo_max_eta = 0.5
 
 # features
-tops = 2
+tops = 5
 feature_mode = 3
-input_size = 17
+input_size = 24
 output_size = 3
 output_sizes = range(3, 5)
 layer_extractors = dict()
@@ -39,6 +39,7 @@ for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
 
 # model
+batch_size = 20
 restore = False
 output_path = None
 dropout = 1.0

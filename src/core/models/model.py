@@ -135,6 +135,31 @@ class Model(object):
             os.makedirs(path)
         saver.save(sess, self.config.model_output)
 
+    def run_evaluate(self, sess, test_set, base_acc, base_f1, processing=None):
+        """
+        Computes evaluation over a test set an log it
+        """
+        ys, labs, accs = [], [], []
+        for (x, y) in minibatches(test_set, self.config.batch_size):
+            if processing is not None:
+                x, y = processing(x, y)
+
+            fd = self.get_feed_dict(x, 1.0, y)
+            acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
+
+            ys   += [y]
+            labs += [lab]
+            accs  += [acc]
+
+        acc = np.mean(accs)
+        labs = np.concatenate(labs, axis=0)
+        ys = np.concatenate(ys, axis=0)
+
+        f1 = f1score(ys, labs, labels=range(self.config.output_size), average=self.config.f1_mode)
+        logger.info("- dev acc: {:04.2f} (baseline {:04.2f}) f1: {:04.2f} (baseline {:04.2f})".format(
+            acc * 100.0, base_acc * 100.0, f1 * 100.0, base_f1*100.0))
+
+        return acc, f1, ys, labs
 
     def run_epoch(self, sess, epoch, train_examples, dev_set, dev_baseline, dev_baseline_f1, post_process=None):
         """
@@ -155,26 +180,23 @@ class Model(object):
 
             if post_process is not None:
                 train_x, train_y = post_process(train_x, train_y)
+
             fd = self.get_feed_dict(train_x, self.config.dropout, train_y)
             _, train_loss = sess.run([self.train_op, self.loss], feed_dict=fd)
             prog.update(i + 1, [("train loss", train_loss)])
 
         logger.info("Evaluating on dev set")
-        dev_x, dev_y = zip(*dev_set)
-        dev_x, dev_y = post_process(dev_x, dev_y)
-        fd = self.get_feed_dict(dev_x, 1.0, dev_y)
-        acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
-        dev_f1 = f1score(dev_y, lab, labels=range(self.config.output_size), average=self.config.f1_mode)
-        logger.info("- dev acc: {:04.2f} (baseline {:04.2f}) f1: {:04.2f} (baseline {:04.2f})".format(
-            acc * 100.0, dev_baseline * 100.0, dev_f1 * 100.0, dev_baseline_f1*100.0))
+        
+        acc, dev_f1, _, _ = self.run_evaluate(sess, dev_set, dev_baseline, dev_baseline_f1, post_process)
+
         return acc, dev_f1
 
     def train(self, train_examples, dev_set, post_process=default_post_process):
         """
         Train model and saves param
         Args:
-            train_examples: (nsamples, nfeatures) np array
-            dev_set: ...
+            train_examples: (x, y) generator
+            dev_set: (x, y) generator
             dev_baseline: float, acc from baseline
         """
         best_score = 0
@@ -215,33 +237,31 @@ class Model(object):
         logger.info("TESTING")
         logger.info(80 * "=")
         logger.info("Final evaluation on test set")
-        test_x, test_y = zip(*test_set)
-        test_x, test_y = post_process(test_x, test_y)
+        # test_x, test_y = zip(*test_set)
+        # test_x, test_y = post_process(test_x, test_y)
 
-        test_baseline_f1 = f1score(test_y, np.ones(len(test_y)), 
-            labels=range(self.config.output_size), average=self.config.f1_mode)
-        test_baseline = baseline(test_y)
+        # test_baseline_f1 = f1score(test_y, np.ones(len(test_y)), 
+        #     labels=range(self.config.output_size), average=self.config.f1_mode)
+        # test_baseline = baseline(test_y)
+        test_baseline_f1 = 0
+        test_baseline = 0
 
         saver = tf.train.Saver()
         with tf.Session() as sess:
             sess.run(self.init)
             logger.info("Restoring model from {}".format(self.config.model_output))
             saver.restore(sess, self.config.model_output)
-            fd = self.get_feed_dict(test_x, 1.0, test_y)
-            acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
+            
+            acc, test_f1, ys, labs = self.run_evaluate(sess, test_set, 
+                                test_baseline, test_baseline_f1, post_process)
 
-            test_f1 = f1score(test_y, lab, labels=range(self.config.output_size), average=self.config.f1_mode)
-
-            logger.info("- test acc: {:.4} (baseline {:.4}) f1: {:.4} (baseline {:.4})".format(
-            acc * 100.0, test_baseline * 100.0, test_f1 * 100.0, test_baseline_f1*100.0))
-
-            outputConfusionMatrix(test_y, lab, self.config.output_size, self.config.confmatrix_output)
-            outputF1Score(self.config, logger, test_y, np.ones(len(test_y)), "Baseline")
+            outputConfusionMatrix(ys, labs, self.config.output_size, self.config.confmatrix_output)
+            outputF1Score(self.config, logger, ys, np.ones(len(ys)), "Baseline")
             logger.info("\n")
-            outputF1Score(self.config, logger, test_y, lab, "Model")
+            outputF1Score(self.config, logger, ys, labs, "Model")
 
             if test_raw is not None:
-                export_result(self.config, logger)(test_y, lab, test_raw)
+                export_result(self.config, logger)(ys, labs, test_raw)
 
         return acc, test_baseline
 

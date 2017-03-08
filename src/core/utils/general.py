@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import random
 import numpy as np
 import cPickle as pickle
 from optparse import OptionParser
@@ -15,7 +16,7 @@ def apply_options(config, options):
         config module
     """
     if options.test:
-        config.max_events = 10
+        config.max_iter = 10
         config.n_epochs = 2
     if options.restore:
         config.restore = True
@@ -64,16 +65,31 @@ def args(default):
 
     return options
 
-def get_all_dirs(path):
+def get_all_dirs(path, shuffle=False):
     """
     Return a list of string of all dir name in path
     """
     dirs = [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+    if shuffle:
+        random.shuffle(dirs)
     return dirs
 
-def get_all_files(path):
+def get_all_files(path, shuffle=False):
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    if shuffle:
+        random.shuffle(files)
     return files
+
+def check_dir(path):
+    """
+    Check if path exists
+    if not, creates it
+    """
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+def check_file(path):
+    return os.path.isfile(path)
 
 def pickle_dump(obj, path, verbose=True):
     """
@@ -97,13 +113,7 @@ def pickle_load(path, verbose=True):
     if verbose:
         print "- done."
 
-def check_dir(path):
-    """
-    Check if path exists
-    if not, creates it
-    """
-    if not os.path.exists(path):
-        os.makedirs(path)
+
 
 
 class Progbar(object):

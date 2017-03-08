@@ -9,22 +9,36 @@ from general import pickle_dump, pickle_load, Progbar
 
 def minibatches(data, minibatch_size, shuffle=True):
     """
-    Returns an iterator
+    Generator of batches of size minibatch size
     Args:
-        data: list of x, y
+        data: generator of (x, y)
         minibatch_size: (int) 
         shuffle: (bool)
     Returns:
         iterator: yields a list of np array of size < minibatch_size
     """
-    data_size = len(data)
-    indices = np.arange(data_size)
-    if shuffle:
-        np.random.shuffle(indices)
-    for minibatch_start in np.arange(0, data_size, minibatch_size):
-        minibatch_indices = indices[minibatch_start:minibatch_start + minibatch_size]
-        x, y = zip(*([data[i] for i in minibatch_indices]))
-        yield x, y 
+    # if data generator is list of np array
+    if type(data) == list or type(data).__module__ == np.__name__:
+        data_size = len(data)
+        indices = np.arange(data_size)
+        if shuffle:
+            np.random.shuffle(indices)
+        for minibatch_start in np.arange(0, data_size, minibatch_size):
+            minibatch_indices = indices[minibatch_start:minibatch_start + minibatch_size]
+            x, y = zip(*([data[i] for i in minibatch_indices]))
+            yield x, y
+
+    # if data generator is just a generator of x, y
+    else:
+        x_batch, y_batch = [], []
+        for (x, y), i in data:
+            if len(x_batch) == minibatch_size:
+                yield x_batch, y_batch
+                x_batch, y_batch = [], []
+            x_batch += [x]
+            y_batch += [y]
+        if len(x_batch) != 0:
+            yield x_batch, y_batch
 
 
 def load_data_raw(config):

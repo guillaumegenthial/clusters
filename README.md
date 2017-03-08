@@ -17,6 +17,13 @@ ROOT / Tensorflow
     - simple features
     - fill np arrays with energy deposit
 
+To construct the data from ROOT -> pickle, run 
+
+
+```
+python build_data.py
+```
+
 ## Models
 
 - Fully connected network on simple features

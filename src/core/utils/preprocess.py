@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def make_preprocess(preprocess_x, preprocess_y):
     """
     Preprocess data
@@ -15,7 +16,6 @@ def make_preprocess(preprocess_x, preprocess_y):
         return zip(x, y)
         
     return f
-
 
 def one_hot(output_size):
     """
