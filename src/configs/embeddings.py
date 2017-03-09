@@ -31,7 +31,7 @@ topo_max_eta = 0.5
 # features
 n_cells = 30000
 max_n_cells = 10
-modes = ["e"]
+modes = ["e_density", "pT"]
 n_features = len(modes)
 embedding_size = 50
 id_tok = 0
@@ -40,7 +40,7 @@ output_size = 3
 layer_extractors = dict()
 for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
-extractor = Extractor(layer_extractors, modes)
+extractor = Extractor(layer_extractors, ["e", "vol", "e_density"])
 
 # model
 batch_size = 20

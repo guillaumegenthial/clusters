@@ -1,4 +1,5 @@
 from core.utils.general import Progbar
+from utils import get_mode
 import numpy as np
 
 def get_default_processing(data, extractor, processing_y):
@@ -159,8 +160,8 @@ class Extractor(object):
                 self.preservation_ratio[dep]["cell"] += 1
                 eta_id, phi_id = layer_extractors[dep](cell_, topo_eta, topo_phi)
                 for mode in self.modes:
-                    matrices[dep][mode][phi_id, eta_id] += cell_[mode]
-
+                    matrices[dep][mode][phi_id, eta_id] += get_mode(cell_, mode)
+                    
         for dep, modes_ in matrices.iteritems():
             self.preservation_ratio[dep]["mat"] += np.count_nonzero(modes_["e"])
             if np.sum(modes_["e"]) == 0:
@@ -192,6 +193,7 @@ class Extractor(object):
             ratio = self.get_preservation_ratio(dep)
             print "Layer {}, cell_count {}, mat_count {}, ratio {}".format(
                                   dep, counts["cell"], counts["mat"], ratio)
+
 
 
 

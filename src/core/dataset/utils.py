@@ -103,11 +103,7 @@ def get_cells(mytree):
 
     return cells
 
-def density(e, vol):
-    if vol == 0:
-        return 0.0
-    else:
-        return (float(e)/float(vol))
+
 
 def get_tracks(mytree):
     """

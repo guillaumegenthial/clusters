@@ -41,13 +41,13 @@ def make_datasets(config, preprocess=None, preprocess_raw=None):
     train = DatasetPickle(config=config, files=files_train, preprocess=preprocess, 
         max_iter=int((1-config.dev_size-config.test_size)*config.max_iter))
 
-    dev = DatasetPickle(config=config, files=files_train, preprocess=preprocess, 
+    dev = DatasetPickle(config=config, files=files_dev, preprocess=preprocess, 
         max_iter=int(config.dev_size*config.max_iter))
 
-    test = DatasetPickle(config=config, files=files_train, preprocess=preprocess, 
+    test = DatasetPickle(config=config, files=files_test, preprocess=preprocess, 
         max_iter=int(config.test_size*config.max_iter))
 
-    test_raw = DatasetPickle(config=config, files=files_train, preprocess=preprocess_raw, 
+    test_raw = DatasetPickle(config=config, files=files_test, preprocess=preprocess_raw, 
         max_iter=int(config.test_size*config.max_iter))
 
     return train, dev, test, test_raw

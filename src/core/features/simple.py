@@ -1,4 +1,5 @@
 from core.utils.general import Progbar
+from utils import pT
 import numpy as np
 
 
@@ -128,12 +129,6 @@ def simple_features(tops=5, mode=3):
     # feat += ["dR_pt_{}".format(i) for i in range(tops)]
 
     return f
-
-def pT(I, eta):
-    """
-    Computes transversal momentum from cell intensity I and eta of the cell
-    """
-    return I/np.cosh(eta)
 
 def map_pT(Is, etas):
     return [pT(I, eta) for (I, eta) in zip(Is, etas)]

@@ -101,5 +101,6 @@ def pad_sequences(sequences, max_length, pad_tok):
     for seq in sequences:
         res_ = seq[:max_length] + [pad_tok]*max(max_length - len(seq), 0)
         result +=  [res_]
+
     result = np.array(result)
     return result
