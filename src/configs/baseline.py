@@ -8,7 +8,7 @@ exp_name = "baseline"
 
 # general data
 path = "data/events"
-max_iter = 50
+max_iter = 200
 train_files = "data/config_{}/train.txt".format(max_iter)
 dev_files = "data/config_{}/dev.txt".format(max_iter)
 test_files = "data/config_{}/test.txt".format(max_iter)
@@ -32,7 +32,7 @@ topo_max_eta = 0.5
 tops = 5
 feature_mode = 3
 input_size = 24
-output_size = 3
+output_size = 2
 layer_extractors = dict()
 for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)

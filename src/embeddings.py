@@ -6,6 +6,8 @@ from core.features.embeddings import ids_features, get_default_processing
 from core.utils.general import args, apply_options
 from core.dataset.pickle import make_datasets
 from core.models.inputs import EmbeddingsInput
+from core.models.layer import FullyConnected, Dropout, Flatten, \
+    ReLu, Conv2d, MaxPool, Combine, Reduce, Embedding
 
 # load config
 options = args("embeddings")
@@ -21,10 +23,23 @@ preprocess_raw = lambda cluster: (featurizer_raw(cluster), cluster["nparts"])
 # get data
 train_examples, dev_set, test_set, test_raw = make_datasets(
             config, preprocess, preprocess_raw)
+all_ids = set()
+for (x, y), i in train_examples:
+    all_ids.update(x["ids"])
+
+# dynamically allocate the vocab size 
+config.n_cells = max(all_ids) + 3
+config.unk_tok_id = config.n_cells - 1
+config.pad_tok_id = config.n_cells - 2
+for layer in config.layers:
+    if layer.__class__.__name__ == "Embedding":
+        print "Setting vocab_size to {}".format(config.n_cells)
+        layer.vocab_size = config.n_cells
 
 # data processing
 processing = get_default_processing(train_examples, config.n_features, 
-    preprocess_y(config.output_size), config.max_n_cells, config.id_tok, config.feat_tok)
+    preprocess_y(config.output_size), config.max_n_cells, config.n_cells-3, 
+    config.pad_tok_id, config.unk_tok_id, config.pad_tok_feat)
 
 # model
 model = EmbeddingsInput(config)

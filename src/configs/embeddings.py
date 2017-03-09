@@ -1,17 +1,17 @@
 import numpy as np
 from core.features.layers import LayerExtractor, Extractor
 from core.models.layer import FullyConnected, Dropout, Flatten, \
-    ReLu, Conv2d, MaxPool, Combine, ReduceMax, Embedding
+    ReLu, Conv2d, MaxPool, Combine, Reduce, Embedding, Concat
 
 # general
 exp_name = "embeddings"
 
 # general data
 path = "data/events"
-train_files = "data/config/train.txt"
-dev_files = "data/config/dev.txt"
-test_files = "data/config/test.txt"
-max_iter = 50
+max_iter = 200
+train_files = "data/config_{}/train.txt".format(max_iter)
+dev_files = "data/config_{}/dev.txt".format(max_iter)
+test_files = "data/config_{}/test.txt".format(max_iter)
 shuffle = True
 dev_size = 0.1
 test_size = 0.2
@@ -29,14 +29,15 @@ topo_min_eta = 0
 topo_max_eta = 0.5
 
 # features
-n_cells = 30000
-max_n_cells = 10
-modes = ["e_density", "pT"]
+n_cells = None # to be set depending on the train set
+max_n_cells = 200
+modes = ["e", "vol", "e_density"]
 n_features = len(modes)
-embedding_size = 50
-id_tok = 0
-feat_tok = np.zeros(len(modes))
-output_size = 3
+embedding_size = 64
+unk_tok_id = None
+pad_tok_id = None
+pad_tok_feat = np.zeros(len(modes))
+output_size = 2
 layer_extractors = dict()
 for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
@@ -56,9 +57,12 @@ selection = "acc"
 f1_mode = "micro"
 layers = [
     Embedding(n_cells, embedding_size, name="embedding", input_names=["ids"]), 
-    Combine(name="combine", 
-        input_names=["embedding", "features"]), 
-    ReduceMax(axis=1, name="reduce_max"), 
+    Combine(name="combine", input_names=["embedding", "features"]), 
+    Reduce(axis=1, op="max", name="reduce_max", input_names=["combine"]), 
+    Reduce(axis=1, op="mean", name="reduce_mean", input_names=["combine"]),
+    Concat(axis=1, input_names=["reduce_max", "reduce_mean"]), 
     Flatten(),
+    # FullyConnected(50), 
+    # ReLu(),
     FullyConnected(output_size)
 ]

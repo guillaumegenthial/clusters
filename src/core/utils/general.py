@@ -24,6 +24,7 @@ def apply_options(config, options):
 
     if options.restore:
         config.restore = True
+        
     if options.epochs != 20:
         config.n_epochs = options.epochs
 

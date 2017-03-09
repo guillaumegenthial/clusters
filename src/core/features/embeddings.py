@@ -27,7 +27,8 @@ def ids_features(modes=["e_density"]):
 
     return f
 
-def get_default_processing(data, n_features, processing_y, max_length, id_tok, feat_tok):
+def get_default_processing(data, n_features, processing_y, max_length, 
+                         max_id, pad_tok_id, unk_tok_id, pad_tok_feat):
     """
     Compute statistics over data and outputs a function
     Args:
@@ -64,13 +65,19 @@ def get_default_processing(data, n_features, processing_y, max_length, id_tok, f
 
     print "- done."
 
+    def get_tok_id(tok_id):
+        if tok_id > max_id:
+            return unk_tok_id
+        else:
+            return tok_id
+
     def f(X, Y):    
         ids = []
         features_batch = []
         # apply statistics
         for x in X:
             features_cluster = []
-            ids += [x["ids"]]
+            ids += [map(get_tok_id, x["ids"])]
             for feat_cell in x["features"]:
                 features_cell = []
                 for i, feat in enumerate(feat_cell):
@@ -78,11 +85,8 @@ def get_default_processing(data, n_features, processing_y, max_length, id_tok, f
                 features_cluster += [features_cell]
             features_batch += [features_cluster]
 
-        ids_pad  = pad_sequences(ids, max_length, id_tok)
-        feat_pad = pad_sequences(features_batch, max_length, feat_tok)
-
-        if n_features == 1:
-            feat_pad = np.expand_dims(feat_pad, -1)
+        ids_pad  = pad_sequences(ids, max_length, pad_tok_id)
+        feat_pad = pad_sequences(features_batch, max_length, pad_tok_feat)
 
         return [ids_pad, feat_pad], processing_y(Y)
 

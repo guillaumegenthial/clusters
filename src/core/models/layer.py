@@ -150,28 +150,25 @@ class Embedding(Layer):
         self.output_shape = self.input_shape + [self.embedding_size]
 
 
-class ReduceMax(Layer):
-    def __init__(self, axis, name=None, input_names=[]):
+class Reduce(Layer):
+    def __init__(self, axis, op="max", name=None, input_names=[]):
         Layer.__init__(self, name, input_names)
         self.axis = axis
+        self.op = op
 
     def __call__(self, inputs):
-        return tf.reduce_max(inputs, axis=self.axis)
+        if self.op == "max":
+            return tf.reduce_max(inputs, axis=self.axis)
+        elif self.op == "min":
+            return tf.reduce_min(inputs, axis=self.axis)
+        elif self.op == "mean":
+            return tf.reduce_max(inputs, axis=self.axis)
+        elif self.op == "sum":
+            return tf.reduce_sum(inputs, axis=self.axis)
 
     def update_param(self):
         self.output_shape = self.input_shape[:self.axis]+ self.input_shape[self.axis+1:]
 
-
-class ReduceMin(Layer):
-    def __init__(self, axis, name=None, input_names=[]):
-        Layer.__init__(self, name, input_names)
-        self.axis = axis
-
-    def __call__(self, inputs):
-        return tf.reduce_min(inputs, axis=self.axis)
-
-    def update_param(self):
-        self.output_shape = self.input_shape[:self.axis]+ self.input_shape[self.axis+1:]
 
 class Combine(Layer):
     def __call__(self, inputs):
@@ -197,6 +194,24 @@ class Combine(Layer):
         self.output_shape = shape0 + [shape1[-1]]
 
 
+class Concat(Layer):
+    def __init__(self, axis, name=None, input_names=[]):
+        Layer.__init__(self, name, input_names)
+        self.axis = axis
 
+    def __call__(self, inputs):
+        """
+        Args:
+            inputs: list of tensors
+        Return:
+            a tensor that concat inputs along the given axis
+        """
+        assert type(inputs) == list
+        return tf.concat(inputs, axis=self.axis)
+
+    def update_param(self):
+        shape0 = self.input_shape[0]
+        self.output_shape = shape0
+        self.output_shape[self.axis] = sum(s[self.axis] for s in self.input_shape)
 
 

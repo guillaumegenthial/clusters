@@ -8,10 +8,10 @@ exp_name = "baseline"
 
 # general data
 path = "data/events"
-train_files = "data/config/train.txt"
-dev_files = "data/config/dev.txt"
-test_files = "data/config/test.txt"
-max_iter = 50
+max_iter = 200
+train_files = "data/config_{}/train.txt".format(max_iter)
+dev_files = "data/config_{}/dev.txt".format(max_iter)
+test_files = "data/config_{}/test.txt".format(max_iter)
 shuffle = True
 dev_size = 0.1
 test_size = 0.2
