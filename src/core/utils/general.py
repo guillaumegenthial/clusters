@@ -18,6 +18,10 @@ def apply_options(config, options):
     if options.test:
         config.max_iter = 10
         config.n_epochs = 2
+        config.train_files = "data/config_test/train.txt"
+        config.dev_files = "data/config_test/dev.txt"
+        config.test_files = "data/config_test/test.txt"
+
     if options.restore:
         config.restore = True
     if options.epochs != 20:

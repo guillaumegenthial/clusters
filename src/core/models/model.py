@@ -47,7 +47,8 @@ class Model(object):
     def add_placeholder(self):
         """
         Defines self.x and self.y, tf.placeholders
-        Defines self.x_shape of type [d1, d2, ...]
+        Defines self.shapes dict("x": shape of x, ...)
+        Defines self.nodes dict("x": self.x, ...)
         """
         raise NotImplementedError
 
@@ -65,12 +66,32 @@ class Model(object):
         """
         Defines self.pred
         """
-        pred = self.x
-        input_shape = self.x_shape
+        # get inputs
+        input_nodes = self.nodes.keys()
+        # default
+        pred = self.nodes[input_nodes[0]]
+        input_shape = self.shapes[input_nodes[0]]
+        # go through the layers
         for layer in self.layers:
-            print "- at layer {}, input shape {}".format(layer.name, input_shape)
-            layer.set_param(dropout=self.dropout, input_shape=input_shape)
-            pred = layer(pred)
+            # default
+            if layer.input_names == []:
+                print "- at layer {}, input shape {}".format(layer.name, input_shape)
+                layer.set_param(dropout=self.dropout, input_shape=input_shape)
+                pred = layer(pred)
+            else:
+                input_shape = [self.shapes[n] for n in layer.input_names]
+                print "- at layer {}, input shape {}".format(layer.name, input_shape)
+                inputs = [self.nodes[input_name] for input_name in layer.input_names]
+                if len(inputs) == 1:
+                    inputs = inputs[0]
+                    input_shape = input_shape[0]
+                layer.set_param(dropout=self.dropout, input_shape=input_shape)
+                pred = layer(inputs)
+
+            self.nodes[layer.name] = pred
+            self.shapes[layer.name] = layer.output_shape
+            print "- at layer {}, output shape {}".format(layer.name, layer.output_shape)
+            # default
             input_shape = layer.output_shape
 
         self.pred = pred

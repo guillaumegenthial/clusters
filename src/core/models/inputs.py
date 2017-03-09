@@ -14,10 +14,13 @@ class FlatInput(Model):
         """
         Defines self.x and self.y, tf.placeholders
         """
-        self.x_shape = [None, self.config.input_size]
-        self.x = tf.placeholder(tf.float32, shape=self.x_shape)
+        self.x = tf.placeholder(tf.float32, 
+            shape=[None, self.config.input_size])
         self.y = tf.placeholder(tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
+
+        self.nodes = {"x": self.x}
+        self.shapes = {"x": [None, self.config.input_size]}
 
 class SquareInput(Model):
     def __init__(self, config, n_phi, n_eta, n_features, layers=None):
@@ -31,10 +34,13 @@ class SquareInput(Model):
         n_eta = self.config.n_eta
         n_features = self.config.n_features
 
-        self.x_shape = [None, n_phi, n_eta, n_features]
-        self.x = tf.placeholder(tf.float32, shape=self.x_shape)
+        self.x = tf.placeholder(tf.float32, 
+            shape=[None, n_phi, n_eta, n_features])
         self.y = tf.placeholder(tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
+
+        self.nodes = {"x": self.x}
+        self.shapes = {"x": [None, n_phi, n_eta, n_features]}
 
 class EmbeddingsInput(Model):
     def get_feed_dict(self, x, d, y=None):
@@ -70,36 +76,11 @@ class EmbeddingsInput(Model):
         self.y = tf.placeholder(dtype=tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
 
-    def add_prediction_op(self):
-        """
-        Defines self.pred
-        """
-        # shape = (None, max_n_cells, embedding_size, 1)
-        embedding_layer = Embedding(self.config.n_cells, self.config.embedding_size)
-        embeddings = embedding_layer(self.ids)
-        embeddings = tf.expand_dims(embeddings, axis=3)
+        self.nodes = {
+            "features": self.features, 
+            "ids": self.ids}
+        self.shapes = {
+            "features": [None, self.config.max_n_cells, self.config.n_features], 
+            "ids": [None, self.config.max_n_cells]}
 
-        # shape = (None, max_n_cells, 1, n_features)
-        features = tf.expand_dims(self.features, axis=2)
-
-
-        # shape = (None, max_n_cells, embedding_size, n_features)
-        feat = tf.matmul(embeddings, features)
-
-        # shape = (None, embedding_size, n_features)
-        feat2 = tf.reduce_max(feat, axis=1)
-
-        # shape = (None, embedding_size * n_features)
-        f_layer = Flatten()
-        f_layer.set_param(input_shape=[None, self.config.embedding_size, self.config.n_features])
-        feat3 = f_layer(feat2)
-
-        # fully connected before pred
-        fc_layer = FullyConnected(self.config.output_size)
-        fc_layer.set_param(input_shape=[None, self.config.embedding_size*self.config.n_features])
-        self.pred = fc_layer(feat3)
-
-
-
-
-
+   

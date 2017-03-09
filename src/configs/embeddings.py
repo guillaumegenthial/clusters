@@ -1,7 +1,7 @@
 import numpy as np
 from core.features.layers import LayerExtractor, Extractor
 from core.models.layer import FullyConnected, Dropout, Flatten, \
-    ReLu, Conv2d, MaxPool
+    ReLu, Conv2d, MaxPool, Combine, ReduceMax, Embedding
 
 # general
 exp_name = "embeddings"
@@ -55,6 +55,10 @@ reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
 f1_mode = "micro"
 layers = [
-    Dropout(name="drop1"), 
-    FullyConnected(output_size, name="fc1"),
-    ]
+    Embedding(n_cells, embedding_size, name="embedding", input_names=["ids"]), 
+    Combine(name="combine", 
+        input_names=["embedding", "features"]), 
+    ReduceMax(axis=1, name="reduce_max"), 
+    Flatten(),
+    FullyConnected(output_size)
+]

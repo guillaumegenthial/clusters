@@ -6,11 +6,12 @@ from core.utils.tf import xavier_weight_init, conv2d, \
 
 
 class Layer(object):
-    def __init__(self, name=None):
+    def __init__(self, name=None, input_names=[]):
         if name is None:
             self.name = self.__class__.__name__
         else:
             self.name = name
+        self.input_names = input_names
 
     def set_param(self, **kwargs):
         for key, value in kwargs.iteritems():
@@ -39,8 +40,8 @@ class Layer(object):
         raise NotImplementedError
 
 class FullyConnected(Layer):
-    def __init__(self, output_size, name=None):
-        Layer.__init__(self, name)
+    def __init__(self, output_size, name=None, input_names=[]):
+        Layer.__init__(self, name, input_names)
         self.output_size = output_size
 
     def __call__(self, inputs):
@@ -53,8 +54,8 @@ class FullyConnected(Layer):
         self.output_shape = self.input_shape[:-1] + [self.output_size]
 
 class Dropout(Layer):
-    def __init__(self, name=None):
-        Layer.__init__(self, name)
+    def __init__(self, name=None, input_names=[]):
+        Layer.__init__(self, name, input_names)
 
     def __call__(self, inputs):
         return tf.nn.dropout(inputs, self.dropout)
@@ -75,9 +76,9 @@ class Flatten(Layer):
 
 class Conv2d(Layer):
     def __init__(self, filter_height, filter_width, 
-                in_channels, out_channels, name=None):
+                in_channels, out_channels, name=None, input_names=[]):
 
-        Layer.__init__(self, name)
+        Layer.__init__(self, name, input_names)
         self.filter_height = filter_height
         self.filter_width = filter_width
         self.in_channels = in_channels
@@ -110,9 +111,9 @@ class Conv2d(Layer):
 
 class MaxPool(Layer):
     def __init__(self, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], 
-                padding='SAME', name=None):
+                padding='SAME', name=None, input_names=[]):
 
-        Layer.__init__(self, name)
+        Layer.__init__(self, name, input_names)
         self.ksize = ksize
         self.strides = strides
         self.padding = padding
@@ -133,9 +134,10 @@ class MaxPool(Layer):
 
         self.output_shape = self.input_shape[:1] + [out_height, out_width] + self.input_shape[3:]
 
+
 class Embedding(Layer):
-    def __init__(self, vocab_size, embedding_size, name=None):
-        Layer.__init__(self, name)
+    def __init__(self, vocab_size, embedding_size, name=None, input_names=[]):
+        Layer.__init__(self, name, input_names)
         self.vocab_size = vocab_size
         self.embedding_size = embedding_size
 
@@ -145,7 +147,56 @@ class Embedding(Layer):
         return tf.nn.embedding_lookup(L, inputs, name="embeddings")
 
     def update_param(self):
-        self.output_shape = self.input_shape[:1] + [self.embedding_size]
+        self.output_shape = self.input_shape + [self.embedding_size]
+
+
+class ReduceMax(Layer):
+    def __init__(self, axis, name=None, input_names=[]):
+        Layer.__init__(self, name, input_names)
+        self.axis = axis
+
+    def __call__(self, inputs):
+        return tf.reduce_max(inputs, axis=self.axis)
+
+    def update_param(self):
+        self.output_shape = self.input_shape[:self.axis]+ self.input_shape[self.axis+1:]
+
+
+class ReduceMin(Layer):
+    def __init__(self, axis, name=None, input_names=[]):
+        Layer.__init__(self, name, input_names)
+        self.axis = axis
+
+    def __call__(self, inputs):
+        return tf.reduce_min(inputs, axis=self.axis)
+
+    def update_param(self):
+        self.output_shape = self.input_shape[:self.axis]+ self.input_shape[self.axis+1:]
+
+class Combine(Layer):
+    def __call__(self, inputs):
+        """
+        Args:
+            inputs: list or tuple of length 2
+                    (embedding, features)
+        """
+        # shape = (None, max_n_cells, embedding_size, 1)
+        input0 = tf.expand_dims(inputs[0], axis=3)
+
+        # shape = (None, max_n_cells, 1, n_features)
+        input1 = tf.expand_dims(inputs[1], axis=2)
+
+        # print inputs[0].get_shape(), input0.get_shape(), input1.get_shape()
+
+        # shape = (None, max_n_cells, embedding_size, n_features)
+        return tf.matmul(input0, input1)
+
+    def update_param(self):
+        shape0 = self.input_shape[0]
+        shape1 = self.input_shape[1]
+        self.output_shape = shape0 + [shape1[-1]]
+
+
 
 
 
