@@ -1,21 +1,20 @@
 import numpy as np
-from core.features.layers import LayerExtractor
+from core.features.layers import LayerExtractor, Extractor
 from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
 
 # general
 exp_name = "embeddings"
 
-# data
-data_path = "data/ntuple_v3_2000k.root"
-data_verbosity = 2
-max_events = 100
-export_data_path = "data/ntuple_v3"
-tree_name = "SimpleJet"
-batch_size = 20
+# general data
+path = "data/events"
+train_files = "data/config/train.txt"
+dev_files = "data/config/dev.txt"
+test_files = "data/config/test.txt"
+max_iter = 50
+shuffle = True
 dev_size = 0.1
 test_size = 0.2
-featurized = True
 
 # prop data
 jet_filter = False 
@@ -41,8 +40,10 @@ output_size = 3
 layer_extractors = dict()
 for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
+extractor = Extractor(layer_extractors, modes)
 
 # model
+batch_size = 20
 restore = False
 output_path = None
 dropout = 1.0

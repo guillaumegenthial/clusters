@@ -42,7 +42,7 @@ class EmbeddingsInput(Model):
         Return feed dict
         Args:
             x: inputs, tuple with x[0] is ids
-                                          x[1] is features
+                                  x[1] is features
             y: labels
             d: dropout
         """
