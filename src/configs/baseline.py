@@ -41,6 +41,7 @@ modes = ["e", "vol"]
 extractor = Extractor(layer_extractors, modes)
 
 # model
+baseclass = 0
 batch_size = 20
 restore = False
 output_path = None

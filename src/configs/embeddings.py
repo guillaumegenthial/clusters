@@ -43,6 +43,7 @@ for l in range(24):
 extractor = Extractor(layer_extractors, ["e", "vol", "e_density"])
 
 # model
+baseclass = 0
 batch_size = 20
 restore = False
 output_path = None

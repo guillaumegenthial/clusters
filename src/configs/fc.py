@@ -46,6 +46,7 @@ n_eta = layer_extractors.values()[0].n_eta
 n_features = n_layers * len(modes)
 
 # model
+baseclass = 0
 batch_size = 20
 restore = False
 output_path = None

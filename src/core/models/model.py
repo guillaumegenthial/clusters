@@ -139,9 +139,9 @@ class Model(object):
         if processing is not None:
             test_x, test_y = processing(test_x, test_y)
 
-        base_f1 = f1score(test_y, np.ones(len(test_y)), 
+        base_f1 = f1score(test_y, self.config.baseclass*np.ones(len(test_y)), 
             labels=range(self.config.output_size), average=self.config.f1_mode)
-        base_acc = baseline(test_y)
+        base_acc = baseline(test_y, target=self.config.baseclass)
         return base_acc, base_f1
 
     def run_evaluate(self, sess, test_set, base_acc, base_f1, processing=None):
@@ -271,7 +271,7 @@ class Model(object):
                                 test_base_acc, test_base_f1, processing)
 
             outputConfusionMatrix(ys, labs, self.config.output_size, self.config.confmatrix_output)
-            outputF1Score(self.config, logger, ys, np.ones(len(ys)), "Baseline")
+            outputF1Score(self.config, logger, ys, self.config.baseclass*np.ones(len(ys)), "Baseline")
             logger.info("\n")
             outputF1Score(self.config, logger, ys, labs, "Model")
 

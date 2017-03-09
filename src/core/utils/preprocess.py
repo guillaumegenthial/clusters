@@ -35,6 +35,12 @@ def max_y(output_size):
     """
     return lambda y: np.minimum(y, output_size-1)
 
+def preprocess_y(output_size):
+    """
+    Return function to apply to a batch of Y
+    """
+    return lambda y: np.maximum(np.minimum(map(lambda x: x-1, y), output_size-1), 0)
+
 
 def default_preprocess(X):
     """

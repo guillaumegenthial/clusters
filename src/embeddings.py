@@ -1,5 +1,5 @@
 import importlib
-from core.utils.preprocess import max_y
+from core.utils.preprocess import preprocess_y
 from core.utils.evaluate import featurized_export_result
 from core.features.layers import wrap_extractor
 from core.features.embeddings import ids_features, get_default_processing
@@ -24,7 +24,7 @@ train_examples, dev_set, test_set, test_raw = make_datasets(
 
 # data processing
 processing = get_default_processing(train_examples, config.n_features, 
-    max_y(config.output_size), config.max_n_cells, config.id_tok, config.feat_tok)
+    preprocess_y(config.output_size), config.max_n_cells, config.id_tok, config.feat_tok)
 
 # model
 model = EmbeddingsInput(config)

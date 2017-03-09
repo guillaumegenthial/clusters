@@ -4,18 +4,17 @@ from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
 
 # general
-exp_name = "conv"
+exp_name = "plots_2k"
 
-# data
-data_path = "data/ntuple_v3_2000k.root"
-data_verbosity = 2
-max_events = 500
-export_data_path = "data/ntuple_v3_cnn"
-tree_name = "SimpleJet"
-batch_size = 20
+# general data
+path = "data/events"
+train_files = "data/config/train.txt"
+dev_files = "data/config/dev.txt"
+test_files = "data/config/test.txt"
+max_iter = 50
+shuffle = True
 dev_size = 0.1
 test_size = 0.2
-featurized = True
 
 # prop data
 jet_filter = False 
@@ -28,6 +27,7 @@ topo_min_pt = 0
 topo_max_pt = 5 
 topo_min_eta = 0 
 topo_max_eta = 0.5
+
 # features
 tops = 2
 feature_mode = 3
@@ -46,6 +46,8 @@ n_eta = layer_extractors.values()[0].n_eta
 n_features = n_layers * len(modes)
 
 # model
+baseclass = 0
+batch_size = 20
 restore = False
 output_path = None
 dropout = 1.0
@@ -55,7 +57,6 @@ n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
 f1_mode = "micro"
-# model
 layers = [
     Conv2d(5, 5, n_features, 100, name="conv1"),
     ReLu(),

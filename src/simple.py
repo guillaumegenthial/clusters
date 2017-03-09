@@ -1,5 +1,5 @@
 import importlib
-from core.utils.preprocess import max_y
+from core.utils.preprocess import preprocess_y, max_y
 from core.utils.evaluate import featurized_export_result
 from core.features.layers import wrap_extractor
 from core.utils.general import args, apply_options
@@ -24,7 +24,7 @@ train_examples, dev_set, test_set, test_raw = make_datasets(
             config, preprocess, preprocess_raw)
 
 # data processing
-processing = get_default_processing(train_examples, max_y(config.output_size))
+processing = get_default_processing(train_examples, preprocess_y(config.output_size))
 
 # model
 model = FlatInput(config, config.input_size)

@@ -26,7 +26,7 @@ def baseline(y, target=1):
         data: list of y
         traget: (int) the class target
     """
-    return np.mean(np.asarray(y) == 1)
+    return np.mean(np.asarray(y) == target)
 
 
 def export_matrices(matrices, path="plots/", suffix="", vmin=-50, vmax=1000):
