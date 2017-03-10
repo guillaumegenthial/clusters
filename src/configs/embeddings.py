@@ -1,7 +1,8 @@
 import numpy as np
 from core.features.layers import LayerExtractor, Extractor
 from core.models.layer import FullyConnected, Dropout, Flatten, \
-    ReLu, Conv2d, MaxPool, Combine, Reduce, Embedding, Concat
+    ReLu, Conv2d, MaxPool, Combine, Reduce, Embedding, Concat, Expand, \
+    LastConcat
 
 # general
 exp_name = "embeddings"
@@ -29,14 +30,11 @@ topo_min_eta = 0
 topo_max_eta = 0.5
 
 # features
-n_cells = None # to be set depending on the train set
-max_n_cells = 200
-modes = ["e", "vol", "e_density"]
+max_n_cells = 150
+modes = ["e_density", "eta", "phi", "vol", "pT"]
 n_features = len(modes)
 embedding_size = 64
-unk_tok_id = None
-pad_tok_id = None
-pad_tok_feat = np.zeros(len(modes))
+pad_tok = np.zeros(len(modes))
 output_size = 2
 layer_extractors = dict()
 for l in range(24):
@@ -56,13 +54,20 @@ reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
 f1_mode = "micro"
 layers = [
-    Embedding(n_cells, embedding_size, name="embedding", input_names=["ids"]), 
-    Combine(name="combine", input_names=["embedding", "features"]), 
-    Reduce(axis=1, op="max", name="reduce_max", input_names=["combine"]), 
-    Reduce(axis=1, op="mean", name="reduce_mean", input_names=["combine"]),
-    Concat(axis=1, input_names=["reduce_max", "reduce_mean"]), 
+    # embedding
+    FullyConnected(embedding_size, name="embedding"),
+    FullyConnected(2*embedding_size), 
+    ReLu(), 
+    FullyConnected(16*embedding_size), 
+    ReLu(),
+    Reduce(axis=1, op="max", keep_dims=True, name="max_pool"), 
+    LastConcat(axis=2, input_names=["embedding", "max_pool"]), 
+    FullyConnected(8*embedding_size), 
+    ReLu(), 
+    FullyConnected(2*embedding_size), 
+    ReLu(),
+    FullyConnected(embedding_size),
+    ReLu(),  
     Flatten(),
-    # FullyConnected(50), 
-    # ReLu(),
     FullyConnected(output_size)
 ]

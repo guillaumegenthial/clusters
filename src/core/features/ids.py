@@ -3,39 +3,47 @@ import numpy as np
 from utils import get_mode
 from core.utils.preprocess import pad_sequences
 
-
-def embedding_features(modes):
+def ids_features(modes=["e_density"]):
     """
     Featurizer
     Args:
         modes: list of string
-    Return:
+    Returns:
         a function that takes a cluster as input
         f(d_) = {ids: ..., features: ...}
     """
     def f(d_):
         cells = d_["topo_cells"]
+        ids = []
         features = []
         for id_, cell_ in cells.iteritems():
-            features += [[get_mode(cell_, mode) for mode in modes]]
+            ids += [id_]
+            res_ = []
+            for mode in modes:
+                res_ += [get_mode(cell_, mode)]
+            features += [res_]
 
-        return features
+        return {"ids": ids, "features": features}
 
     return f
 
-
-def get_default_processing(data, n_features, processing_y, max_length, pad_tok, statistics="default"):
+def get_default_processing(data, n_features, processing_y, max_length, 
+        max_id, pad_tok_id, unk_tok_id, pad_tok_feat, statistics="default"):
     """
     Compute statistics over data and outputs a function
     Args:
         data: (generator) of (x, y), i tuples
         processing_y: function of a batch of Y
         max_length: padding length
-        pad_tok: used for padding
-    Return:
+        max_id: max id for cell ids
+        pad_tok_id: id used for padding 
+        unk_tok_id: id used for unknown cell ids (outside vocabulary)
+        pad_tok_feat: feature vector used for paddings 
+        statistics: string, method to use for the processing
+
+    Returns:
         function f(x, y) where x, y are batches of x and y
     """
-
     print "Creating processing function"
     eps = 0.00001
     means = np.zeros(n_features)
@@ -48,7 +56,8 @@ def get_default_processing(data, n_features, processing_y, max_length, pad_tok, 
     for (x, y), n_event in data:
         n_examples += 1
         prog.update(n_event)
-        for feat_cell in x:
+        features = x["features"]
+        for feat_cell in features:
             for i, feat in enumerate(feat_cell):
                 means[i] += feat
                 var[i] += feat**2
@@ -64,13 +73,20 @@ def get_default_processing(data, n_features, processing_y, max_length, pad_tok, 
 
     print "- done."
 
+    def get_tok_id(tok_id):
+        if tok_id > max_id:
+            return unk_tok_id
+        else:
+            return tok_id
 
-    def f(X, Y):
+    def f(X, Y):    
+        ids = []
         features_batch = []
         # apply statistics
         for x in X:
             features_cluster = []
-            for feat_cell in x:
+            ids += [map(get_tok_id, x["ids"])]
+            for feat_cell in x["features"]:
                 features_cell = []
                 for i, feat in enumerate(feat_cell):
                     if statistics == "default":
@@ -80,11 +96,14 @@ def get_default_processing(data, n_features, processing_y, max_length, pad_tok, 
                     elif statistics == "scale":
                         features_cell += [feat / np.sqrt(var[i] + eps)]  
                     elif statistics == "none":
-                        features_cell += [feat] 
+                        features_cell += [feat]  
+                        
                 features_cluster += [features_cell]
-            features_batch += [features_cluster] 
+            features_batch += [features_cluster]
 
-        X = pad_sequences(features_batch, max_length, pad_tok)
-        return X, processing_y(Y)
+        ids_pad  = pad_sequences(ids, max_length, pad_tok_id)
+        feat_pad = pad_sequences(features_batch, max_length, pad_tok_feat)
+
+        return [ids_pad, feat_pad], processing_y(Y)
 
     return f

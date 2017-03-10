@@ -42,7 +42,8 @@ class SquareInput(Model):
         self.nodes = {"x": self.x}
         self.shapes = {"x": [None, n_phi, n_eta, n_features]}
 
-class EmbeddingsInput(Model):
+
+class IdInput(Model):
     def get_feed_dict(self, x, d, y=None):
         """
         Return feed dict
@@ -65,7 +66,7 @@ class EmbeddingsInput(Model):
         Defines self.x, self.y and self.dropout tf.placeholders
         Here, the input is a list of ids of cells as well other information about these cells
         Example [1, 14] and [[8.4, 1234], [-1.2, 1453]] where 
-            1 is the id of the cell
+        
             8.4 energy of this cell
             1234 its volume
         """
@@ -82,5 +83,34 @@ class EmbeddingsInput(Model):
         self.shapes = {
             "features": [None, self.config.max_n_cells, self.config.n_features], 
             "ids": [None, self.config.max_n_cells]}
+
+
+class EmbeddingsInput(Model):
+    def get_feed_dict(self, x, d, y=None):
+        """
+        Return feed dict
+        Args:
+            x: inputs [batch_size, max_n_cells, features_size]
+            y: labels
+            d: dropout
+        """
+        feed = {self.x: x, 
+                self.dropout: d}
+        if y is not None:
+            feed[self.y] = y
+        return feed
+
+
+    def add_placeholder(self):
+        """
+        Defines self.x, self.y and self.dropout tf.placeholders
+        """
+        self.x = tf.placeholder(dtype=tf.float32, 
+            shape=[None, self.config.max_n_cells, self.config.n_features], name="features")
+        self.y = tf.placeholder(dtype=tf.int32, shape=[None])
+        self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
+
+        self.nodes = {"x": self.x}
+        self.shapes = {"x": [None, self.config.max_n_cells, self.config.n_features]}
 
    

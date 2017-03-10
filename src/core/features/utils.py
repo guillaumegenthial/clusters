@@ -25,7 +25,7 @@ def get_mode(cell, mode):
     Returns:
         float corresponding to the mode
     """
-    if mode == "e" or mode == "vol":
+    if mode in ["e", "vol", "eta", "phi",  "dep"]:
         return cell[mode]
     if mode == "e_density":
         return e_density(cell["e"], cell["vol"])

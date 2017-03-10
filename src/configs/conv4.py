@@ -4,7 +4,7 @@ from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
 
 # general
-exp_name = "plots_2k"
+exp_name = "conv4"
 
 # general data
 path = "data/events"

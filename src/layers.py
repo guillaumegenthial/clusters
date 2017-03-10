@@ -4,7 +4,7 @@ from core.utils.evaluate import featurized_export_result
 from core.utils.preprocess import preprocess_y
 from core.dataset.pickle import make_datasets
 from core.features.layers import wrap_extractor, get_default_processing
-from core.models.inputs import SquareInput
+from core.models.input import SquareInput
 
 
 # load config

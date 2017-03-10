@@ -3,6 +3,7 @@ from math import ceil
 from model import Model
 from core.utils.tf import xavier_weight_init, conv2d, \
         max_pool_2x2, weight_variable, bias_variable
+import copy
 
 
 class Layer(object):
@@ -40,15 +41,33 @@ class Layer(object):
         raise NotImplementedError
 
 class FullyConnected(Layer):
-    def __init__(self, output_size, name=None, input_names=[]):
+    def __init__(self, output_size, bias=True, name=None, input_names=[]):
         Layer.__init__(self, name, input_names)
         self.output_size = output_size
+        self.bias = bias
 
     def __call__(self, inputs):
+        """
+        Args:
+            inputs: tensor of shape [, .., d]
+        Return:
+            tensor of shape [, ..., output_size] = inputs \cdot W
+        """
         with tf.variable_scope(self.name):
             W = weight_variable('W', [self.input_shape[-1], self.output_size])
-            b = bias_variable('bias', [self.output_size])
-            return tf.matmul(inputs, W) + b
+            
+            if len(self.input_shape) == 3:
+                inputs = tf.reshape(inputs, [-1, self.input_shape[-1]])
+            
+            result = tf.matmul(inputs, W)
+
+            if len(self.input_shape) == 3:
+                result = tf.reshape(result, [-1, self.input_shape[-2], self.output_size])
+
+            if self.bias == True:
+                b = bias_variable('bias', [self.output_size])
+                result += b
+            return result
 
     def update_param(self):
         self.output_shape = self.input_shape[:-1] + [self.output_size]
@@ -151,23 +170,27 @@ class Embedding(Layer):
 
 
 class Reduce(Layer):
-    def __init__(self, axis, op="max", name=None, input_names=[]):
+    def __init__(self, axis, op="max", keep_dims=False, name=None, input_names=[]):
         Layer.__init__(self, name, input_names)
         self.axis = axis
         self.op = op
+        self.keep_dims = keep_dims
 
     def __call__(self, inputs):
         if self.op == "max":
-            return tf.reduce_max(inputs, axis=self.axis)
+            return tf.reduce_max(inputs, axis=self.axis, keep_dims=self.keep_dims)
         elif self.op == "min":
-            return tf.reduce_min(inputs, axis=self.axis)
+            return tf.reduce_min(inputs, axis=self.axis, keep_dims=self.keep_dims)
         elif self.op == "mean":
-            return tf.reduce_max(inputs, axis=self.axis)
+            return tf.reduce_max(inputs, axis=self.axis, keep_dims=self.keep_dims)
         elif self.op == "sum":
-            return tf.reduce_sum(inputs, axis=self.axis)
+            return tf.reduce_sum(inputs, axis=self.axis, keep_dims=self.keep_dims)
 
     def update_param(self):
-        self.output_shape = self.input_shape[:self.axis]+ self.input_shape[self.axis+1:]
+        if self.keep_dims:
+            self.output_shape = self.input_shape[:self.axis]+ [1] + self.input_shape[self.axis+1:]
+        else:
+            self.output_shape = self.input_shape[:self.axis]+ self.input_shape[self.axis+1:]
 
 
 class Combine(Layer):
@@ -193,6 +216,23 @@ class Combine(Layer):
         shape1 = self.input_shape[1]
         self.output_shape = shape0 + [shape1[-1]]
 
+class Expand(Layer):
+    def __init__(self, axis, name=None, input_names=[]):
+        Layer.__init__(self, name, input_names)
+        self.axis = axis
+
+    def __call__(self, inputs):
+        """
+        Args:
+            inputs: shape [batch_size, embed_size]
+        Return:
+            tensor of shape [batch_size, 1, embed_size]
+        """
+        return tf.expand_dims(inputs, axis=1)
+
+    def update_param(self):
+        self.output_shape = self.input_shape[:self.axis] + [1] + self.input_shape[self.axis:]
+
 
 class Concat(Layer):
     def __init__(self, axis, name=None, input_names=[]):
@@ -211,7 +251,32 @@ class Concat(Layer):
 
     def update_param(self):
         shape0 = self.input_shape[0]
-        self.output_shape = shape0
+        self.output_shape = copy.deepcopy(shape0)
         self.output_shape[self.axis] = sum(s[self.axis] for s in self.input_shape)
+
+class LastConcat(Concat):
+    """
+    Custom Concat
+    """
+    def __call__(self, inputs):
+        """
+        Args:
+            inputs: list of tensors
+        Return:
+            a tensor that concat inputs on the last axis
+        """
+        assert type(inputs) == list
+        s = self.input_shape[0]
+        inputs[1] = tf.tile(inputs[1], multiples=[1, s[1], 1])
+
+        return tf.concat(inputs, axis=self.axis)
+
+
+    def update_param(self):
+        shape0 = self.input_shape[0]
+        self.output_shape = copy.deepcopy(shape0)
+        self.output_shape[self.axis] = sum(s[self.axis] for s in self.input_shape)
+
+
 
 

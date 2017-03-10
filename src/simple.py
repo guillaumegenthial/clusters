@@ -5,7 +5,7 @@ from core.features.layers import wrap_extractor
 from core.utils.general import args, apply_options
 from core.dataset.pickle import make_datasets
 from core.features.simple import simple_features, get_default_processing
-from core.models.inputs import FlatInput
+from core.models.input import FlatInput
 from core.utils.evaluate import baseline
 from core.utils.data import get_xy
 # load config
