@@ -36,7 +36,7 @@ def get_default_processing(data, processing_y):
     data.length = n_examples
     print "- done."
 
-    return lambda x, y: ((x - m)/s, processing_y(y))
+    return lambda x, y: ((x - m)/s, processing_y(y), None)
 
 
 def simple_features(tops=5, mode=3):

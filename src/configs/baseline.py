@@ -32,27 +32,26 @@ topo_max_eta = 0.5
 tops = 5
 feature_mode = 3
 input_size = 24
-output_size = 2
+output_size = 3
 layer_extractors = dict()
 for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
 
-modes = ["e", "vol"]
+modes = ["e", "vol", "e_density"]
 extractor = Extractor(layer_extractors, modes)
 
 # model
 baseclass = 0
 batch_size = 20
+n_epochs = 10
 restore = False
 output_path = None
 dropout = 1.0
 lr = 0.001
 reg = 0.01
-n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
 f1_mode = "micro"
 layers = [
-    Dropout(name="drop1"), 
     FullyConnected(output_size, name="fc1"),
     ]

@@ -69,7 +69,7 @@ def get_default_processing(data, extractor, processing_y):
 
             result.append(result_)
 
-        return np.transpose(np.asarray(result), (0, 2, 3, 1)), processing_y(Y)
+        return np.transpose(np.asarray(result), (0, 2, 3, 1)), processing_y(Y), None
 
     return f
 

@@ -44,7 +44,7 @@ class SquareInput(Model):
 
 
 class IdInput(Model):
-    def get_feed_dict(self, x, d, y=None):
+    def get_feed_dict(self, x, d, y=None, m=None):
         """
         Return feed dict
         Args:
@@ -86,27 +86,14 @@ class IdInput(Model):
 
 
 class EmbeddingsInput(Model):
-    def get_feed_dict(self, x, d, y=None):
-        """
-        Return feed dict
-        Args:
-            x: inputs [batch_size, max_n_cells, features_size]
-            y: labels
-            d: dropout
-        """
-        feed = {self.x: x, 
-                self.dropout: d}
-        if y is not None:
-            feed[self.y] = y
-        return feed
-
-
     def add_placeholder(self):
         """
         Defines self.x, self.y and self.dropout tf.placeholders
         """
         self.x = tf.placeholder(dtype=tf.float32, 
             shape=[None, self.config.max_n_cells, self.config.n_features], name="features")
+        self.m = tf.placeholder(dtype=tf.bool, 
+            shape=[None, self.config.max_n_cells], name="mask")
         self.y = tf.placeholder(dtype=tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
 

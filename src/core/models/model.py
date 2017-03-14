@@ -52,14 +52,21 @@ class Model(object):
         """
         raise NotImplementedError
 
-    def get_feed_dict(self, x, d, y=None):
+    def get_feed_dict(self, x, d, y=None, m=None):
         """
         Return feed dict
+        Args:
+            x: batch of x
+            y: batch of y
+            d: dropout keep prob
+            m: batch of mask
         """
         feed = {self.x: x,
                 self.dropout: d}
         if y is not None:
             feed[self.y] = y
+        if m is not None and hasattr(self, "m"):
+            feed[self.m] = m
         return feed
 
     def add_prediction_op(self):
@@ -71,13 +78,18 @@ class Model(object):
         # default
         pred = self.nodes[input_nodes[0]]
         input_shape = self.shapes[input_nodes[0]]
+        # mask
+        if hasattr(self, "m"):
+            mask = self.m
+        else:
+            mask = None
         # go through the layers
         for layer in self.layers:
             # default
             if layer.input_names == []:
                 print "- at layer {}, input shape {}".format(layer.name, input_shape)
                 layer.set_param(dropout=self.dropout, input_shape=input_shape)
-                pred = layer(pred)
+                pred = layer(pred, mask)
             else:
                 input_shape = [self.shapes[n] for n in layer.input_names]
                 print "- at layer {}, input shape {}".format(layer.name, input_shape)
@@ -86,7 +98,7 @@ class Model(object):
                     inputs = inputs[0]
                     input_shape = input_shape[0]
                 layer.set_param(dropout=self.dropout, input_shape=input_shape)
-                pred = layer(inputs)
+                pred = layer(inputs, mask)
 
             self.nodes[layer.name] = pred
             self.shapes[layer.name] = layer.output_shape
@@ -102,13 +114,16 @@ class Model(object):
         Defines self.loss
         """
         losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.pred, labels=self.y)
-        self.loss = tf.reduce_mean(losses) + self.l2_loss() * self.config.reg
+        self.loss = tf.reduce_mean(losses) 
+        # + self.l2_loss() * self.config.reg
+        tf.summary.scalar("loss", self.loss)
 
 
     def l2_loss(self):
-        variables = tf.trainable_variables()
-        l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in variables
-                    if 'bias' not in v.name ])
+        with tf.variable_scope("l2_loss"):
+            variables = tf.trainable_variables()
+            l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in variables
+                        if 'bias' not in v.name ])
 
         return l2_loss
 
@@ -116,8 +131,9 @@ class Model(object):
         """
         Defines self.train_op
         """
-        optimizer = tf.train.AdamOptimizer(self.config.lr)
-        self.train_op = optimizer.minimize(self.loss)
+        with tf.variable_scope("train_step"):
+            optimizer = tf.train.AdamOptimizer(self.config.lr)
+            self.train_op = optimizer.minimize(self.loss)
 
 
     def add_accuracy(self):
@@ -134,6 +150,11 @@ class Model(object):
 
     def add_init(self):
         self.init = tf.global_variables_initializer()
+
+    def add_summary(self, sess): 
+        self.merged = tf.summary.merge_all()
+        self.file_writer = tf.summary.FileWriter(self.config.output_path, sess.graph)
+
 
     def build(self):
         logger.info("Building model")
@@ -158,7 +179,7 @@ class Model(object):
     def run_baseline(self, test_set, processing=None):
         test_x, test_y = get_xy(test_set)
         if processing is not None:
-            test_x, test_y = processing(test_x, test_y)
+            test_x, test_y, mask = processing(test_x, test_y)
 
         base_f1 = f1score(test_y, self.config.baseclass*np.ones(len(test_y)), 
             labels=range(self.config.output_size), average=self.config.f1_mode)
@@ -172,9 +193,9 @@ class Model(object):
         ys, labs, accs = [], [], []
         for (x, y) in minibatches(test_set, self.config.batch_size):
             if processing is not None:
-                x, y = processing(x, y)
+                x, y, m = processing(x, y)
 
-            fd = self.get_feed_dict(x, 1.0, y)
+            fd = self.get_feed_dict(x, 1.0, y, m)
             acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
 
             ys   += [y]
@@ -203,17 +224,21 @@ class Model(object):
         Returns:
             acc: accuracy on dev set
         """
+        n_batches = (len(train_examples) + self.config.batch_size - 1) / self.config.batch_size
         logger.info("Epoch {:} out of {:}".format(epoch + 1, self.config.n_epochs))
-        prog = Progbar(target=(len(train_examples) + self.config.batch_size - 1) / self.config.batch_size)
+        prog = Progbar(target=n_batches)
         for i, (train_x, train_y) in enumerate(minibatches(train_examples, 
                                                 self.config.batch_size)):
 
             if processing is not None:
-                train_x, train_y = processing(train_x, train_y)
+                train_x, train_y, mask = processing(train_x, train_y)
 
-            fd = self.get_feed_dict(train_x, self.config.dropout, train_y)
-            _, train_loss = sess.run([self.train_op, self.loss], feed_dict=fd)
+            fd = self.get_feed_dict(train_x, self.config.dropout, train_y, mask)
+            
+            _, train_loss, summary = sess.run([self.train_op, self.loss, self.merged], feed_dict=fd)
             prog.update(i + 1, [("train loss", train_loss)])
+            if i % 10 == 0:
+                self.file_writer.add_summary(summary, epoch*n_batches + i)
 
         logger.info("Evaluating on dev set")
         
@@ -244,6 +269,7 @@ class Model(object):
             logger.info(80 * "=")
             logger.info("- reg: {:.6f}, lr: {:.6f}".format(self.config.reg, self.config.lr))
 
+            self.add_summary(sess)
             sess.run(self.init)
             if self.config.restore:
                 logger.info("- Restoring model from {}".format(self.config.model_output))

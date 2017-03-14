@@ -26,7 +26,7 @@ train_examples, dev_set, test_set, test_raw = make_datasets(
 
 # data processing
 processing = get_default_processing(train_examples, config.n_features, 
-    preprocess_y(config.output_size), config.max_n_cells, config.pad_tok)
+    preprocess_y(config.output_size), config.max_n_cells, config.pad_tok, "custom")
 
 # model
 model = EmbeddingsInput(config)

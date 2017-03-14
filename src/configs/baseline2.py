@@ -4,7 +4,7 @@ from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool
 
 # general
-exp_name = "baseline"
+exp_name = "baseline2"
 
 # general data
 path = "data/events"
@@ -37,28 +37,26 @@ layer_extractors = dict()
 for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
 
-modes = ["e", "vol"]
+modes = ["e", "vol", "e_density"]
 extractor = Extractor(layer_extractors, modes)
 
 # model
 baseclass = 0
 batch_size = 20
+n_epochs = 10
 restore = False
 output_path = None
-dropout = 1.0
+dropout = 0.5
 lr = 0.001
 reg = 0.01
-n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
 f1_mode = "micro"
 layers = [
-    Dropout(name="drop1"), 
-    FullyConnected(20, name="fc1"),
-    ReLu(),
-    Dropout(),
+    FullyConnected(100, name="fc1"),
+    ReLu(name="relu1"),
     FullyConnected(20, name="fc2"),
-    ReLu(),
-    Dropout(),
-    FullyConnected(output_size, name="fc3")
+    ReLu(name="relu2"),
+    Dropout(name="drop"),
+    FullyConnected(output_size, name="output_layer")
     ]

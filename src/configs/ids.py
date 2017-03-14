@@ -4,7 +4,7 @@ from core.models.layer import FullyConnected, Dropout, Flatten, \
     ReLu, Conv2d, MaxPool, Combine, Reduce, Embedding, Concat
 
 # general
-exp_name = "embeddings"
+exp_name = "ids"
 
 # general data
 path = "data/events"

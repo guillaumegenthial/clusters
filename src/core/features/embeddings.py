@@ -17,7 +17,15 @@ def embedding_features(modes):
         cells = d_["topo_cells"]
         features = []
         for id_, cell_ in cells.iteritems():
-            features += [[get_mode(cell_, mode) for mode in modes]]
+            res = []
+            for mode in modes:
+                feat = get_mode(cell_, mode) 
+                if type(feat) == list:
+                    res += feat
+                else:
+                    res += [feat]
+
+            features += [res]
 
         return features
 
@@ -81,10 +89,16 @@ def get_default_processing(data, n_features, processing_y, max_length, pad_tok, 
                         features_cell += [feat / np.sqrt(var[i] + eps)]  
                     elif statistics == "none":
                         features_cell += [feat] 
+                    elif statistics == "custom":
+                        if i < 6:
+                            features_cell += [(feat - means[i]) / np.sqrt(var[i] + eps)]
+                        else:
+                            features_cell += [feat]
+                            
                 features_cluster += [features_cell]
             features_batch += [features_cluster] 
 
-        X = pad_sequences(features_batch, max_length, pad_tok)
-        return X, processing_y(Y)
+        X, mask = pad_sequences(features_batch, max_length, pad_tok)
+        return X, processing_y(Y), mask
 
     return f

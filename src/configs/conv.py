@@ -38,7 +38,7 @@ layer_extractors = dict()
 for l in range(24):
     layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
 
-modes = ["e", "vol"]
+modes = ["e", "vol", "e_density"]
 extractor = Extractor(layer_extractors, modes)
 n_layers = len(layer_extractors)
 n_phi = layer_extractors.values()[0].n_phi
@@ -48,23 +48,23 @@ n_features = n_layers * len(modes)
 # model
 baseclass = 0
 batch_size = 20
+n_epochs = 10
 restore = False
 output_path = None
-dropout = 1.0
+dropout = 0.5
 lr = 0.001
 reg = 0.01
-n_epochs = 20
 reg_values = np.logspace(-6,0.1,20)
 selection = "acc"
 f1_mode = "micro"
 layers = [
     Conv2d(5, 5, n_features, 100, name="conv1"),
-    ReLu(),
-    MaxPool(name="pool1"),
-    Flatten(),
+    ReLu(name="conv_relu1"),
+    MaxPool(name="conv_pool1"),
+    Flatten(name="flatten"),
     FullyConnected(100, name="fc1"),
-    ReLu(),
-    Dropout(),
-    FullyConnected(output_size, name="fc2"),
+    ReLu(name="relu1"),
+    Dropout(name="drop"),
+    FullyConnected(output_size, name="output_layer"),
     ]
 

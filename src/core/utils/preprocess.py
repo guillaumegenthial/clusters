@@ -104,9 +104,13 @@ def pad_sequences(sequences, max_length, pad_tok):
         np array of size [n_sequences, max_length, len(pad_took)]
     """
     result = []
+    masks = []
     for seq in sequences:
         res_ = seq[:max_length] + [pad_tok]*max(max_length - len(seq), 0)
+        mask = [1]*min(len(seq), max_length) + [0]*(max(max_length-len(seq), 0))
         result +=  [res_]
+        masks += [mask]
 
     result = np.array(result)
-    return result
+    masks = np.array(masks)
+    return result, masks
