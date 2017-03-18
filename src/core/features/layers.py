@@ -2,7 +2,7 @@ from core.utils.general import Progbar
 from utils import get_mode
 import numpy as np
 
-def get_default_processing(data, extractor, processing_y):
+def get_default_processing(data, extractor, processing_y, statistics="default"):
     """
     Compute statistics over data and outputs a function
     Args:
@@ -27,7 +27,7 @@ def get_default_processing(data, extractor, processing_y):
     # get statistics
     prog = Progbar(target=data.max_iter)
     n_examples = 0
-    for (x, y), i in data:
+    for (x, y, _), i in data:
         n_examples += 1
         prog.update(i)
         for dep, modes_ in x.iteritems():
@@ -61,11 +61,15 @@ def get_default_processing(data, extractor, processing_y):
             for dep, modes_ in x.iteritems():
                 for mode, dat in modes_.iteritems():
                     if type(dat) != tuple:
-                        result_ += [(dat - mean[dep][mode]) / (np.sqrt(var[dep][mode]) + eps)]
+                        mat_ = dat
                     else:
                         n_phi = extractor.layer_extractors[dep].n_phi
                         n_eta = extractor.layer_extractors[dep].n_eta
-                        result_ += [(np.zeros([n_phi, n_eta]))]
+                        mat_  = (np.zeros([n_phi, n_eta]))
+
+                    mat_ = (mat_ - mean[dep][mode]) / (np.sqrt(var[dep][mode]) + eps)
+
+                    result_ += [mat_]
 
             result.append(result_)
 

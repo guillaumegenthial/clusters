@@ -22,6 +22,8 @@ class general(object):
     topo_min_eta = 0 
     topo_max_eta = 1
     shuffle_clusters = True
+    part_filter = True
+    part_min = 1
 
     # pred
     output_size = 2

@@ -102,12 +102,13 @@ def featurized_export_result(config, logger, tar, lab, test_raw=None):
     if test_raw is not None:
         tar_lab_seen = set()
         for (t, l, d) in zip(tar, lab, test_raw):
-            (x, y), _ = d
+            data_tuple, _ = d
+            x, y = data_tuple[0], data_tuple[1]
             if (t, l) not in tar_lab_seen:
                 logger.info("- extracting layers for true label {}, pred {} in {}".format(
-                                            t, l, config.plot_output))
+                                            t+config.part_min, l+config.part_min, config.plot_output))
                 tar_lab_seen.add((t, l))
-                path = config.plot_output + "true_{}_pred{}/".format(t, l)
+                path = config.plot_output + "true_{}_pred{}/".format(t+config.part_min, l+config.part_min)
                 check_dir(path)
                 export_matrices(x, path, "_raw")
 
@@ -253,13 +254,13 @@ def dump_results(target, label, path):
             f.write("{}    {}\n".format(t, l))
 
 
-def outputConfusionMatrix(tar, lab, output_size, filename):
+def outputConfusionMatrix(tar, lab, part_min, output_size, filename):
     """ Generate a confusion matrix """
     cm = confusion_matrix(tar, lab, labels=range(output_size))
     plt.figure()
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Reds)
     plt.colorbar()
-    classes = range(output_size)
+    classes = range(part_min, part_min + output_size)
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes)
     plt.yticks(tick_marks, classes)
@@ -274,22 +275,31 @@ def outputConfusionMatrix(tar, lab, output_size, filename):
     plt.savefig(filename)
     plt.close()
 
-def outputPerfProp(tar, lab, lead_props, filename, bins=8, av="macro", output_size=2):
+def outputPerfProp(tar, lab, lead_props, filename, bins=8, av="macro", output_size=2, eval_perf_class=None, part_min=1):
     tars = defaultdict(list)
     labs = defaultdict(list)
     f1s = [0]*bins
     for t, l, p in zip(tar, lab, lead_props):
         idx = min(int(p*bins), bins-1)
-        tars[idx] += [t]
-        labs[idx] += [l]
+        if eval_perf_class is None:
+            tars[idx] += [t]
+            labs[idx] += [l]
+        else:
+            if t == eval_perf_class:
+                tars[idx] += [t]
+                labs[idx] += [l]
 
     for b in range(bins):
-        f1 = f1_score(tars[b], labs[b], labels=range(output_size), average=av)
+        if eval_perf_class is None:
+            f1 = f1_score(tars[b], labs[b], labels=range(output_size), average=av)
+        else:
+            f1 = sum(map(lambda (x, y): x == y, zip(tars[b], labs[b]))) / float(max(len(tars[b]), 1))
         f1s[b] = f1
 
     plt.figure()
     plt.plot(map(lambda x: x/float(bins) + 1./float(2*bins),range(bins)), f1s)
-    plt.xlabel('Fraction of the leading particle')
+    x_lab = " - cluster with {} parts".format(eval_perf_class+part_min) if eval_perf_class is not None else ""
+    plt.xlabel('Fraction of the leading particle{}'.format(x_lab))
     plt.ylabel('F1 score - {}'.format(av))
     plt.savefig(filename)
     plt.close()
@@ -319,7 +329,7 @@ def outputF1Score(config, logger, tar, lab, name, labels=None):
     rc_global = recall_score(tar, lab, labels=labels, average=None)
 
     for (pr, rc, f1, lab) in zip(pr_global, rc_global, f1_global, labels):
-        lab_toprint = "lab {}".format(lab) + " "*(len(max(averages, key=len)) - len("lab {}".format(lab)))
+        lab_toprint = "lab {}".format(lab + config.part_min) + " "*(len(max(averages, key=len)) - len("lab {}".format(lab)))
         logger.info("\t".join([lab_toprint, "{:.4}".format(pr*100.0)+" "*(len("Precision")-4), 
             "{:.4}".format(rc*100.0)+" "*(len("Recall")-4), "{:.4}".format(f1*100.0)]))
 

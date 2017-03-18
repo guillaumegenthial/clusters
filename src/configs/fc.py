@@ -12,8 +12,6 @@ class config(general):
     tops = 2
     feature_mode = 3
     input_size = 17
-    output_size = 3
-    output_sizes = range(3, 5)
     layer_extractors = dict()
     for l in range(24):
         layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
@@ -32,5 +30,5 @@ class config(general):
         FullyConnected(100, name="fc1"),
         ReLu(name="relu1"),
         Dropout(name="drop"),
-        FullyConnected(output_size, name="output_layer"),
+        FullyConnected(general.output_size, name="output_layer"),
         ]

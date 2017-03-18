@@ -99,6 +99,10 @@ class DatasetPickle(DatasetBase):
         self.topo_min_eta = config.topo_min_eta
         self.topo_max_eta = config.topo_max_eta
 
+        # filter on number of particles
+        self.part_filter = config.part_filter
+        self.part_min = config.part_min
+
     def __iter__(self):
         if self.shuffle:
             random.shuffle(self.files)
@@ -121,6 +125,9 @@ class DatasetPickle(DatasetBase):
                     if not ((self.jet_min_pt < jet[0] < self.jet_max_pt) and
                         (self.jet_min_eta < jet[1] < self.jet_max_eta)):
                         continue
+
+                if self.part_filter and cluster["nparts"] < self.part_min:
+                    continue
                     
                 if self.topo_filter:
                     if not ((self.topo_min_pt < cluster["topo_pt"] < self.topo_max_pt) and

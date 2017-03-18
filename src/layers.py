@@ -15,13 +15,13 @@ config = apply_options(config, options)
 # data featurizers
 extractor = config.extractor
 featurizer = wrap_extractor(extractor)
-preprocess = lambda cluster: (featurizer(cluster), cluster["nparts"])
+preprocess = lambda cluster: (featurizer(cluster), cluster["nparts"], cluster["props"])
 
 # get data
 train_examples, dev_set, test_set, test_raw = make_datasets(config, preprocess, preprocess)
 
 # data processing
-processing = get_default_processing(train_examples, extractor, preprocess_y(config.output_size))
+processing = get_default_processing(train_examples, extractor, preprocess_y(config.part_min, config.output_size))
 
 # model
 model = SquareInput(config, config.n_eta, config.n_phi, config.n_features)

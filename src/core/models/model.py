@@ -337,12 +337,19 @@ class Model(object):
             acc, test_f1, ys, labs, lead_props = self.run_evaluate(sess, test_set, 
                                 test_base_acc, test_base_f1, processing)
 
-            outputConfusionMatrix(ys, labs, self.config.output_size, self.config.confmatrix_output)
+            outputConfusionMatrix(ys, labs, self.config.part_min, 
+                    self.config.output_size, self.config.confmatrix_output)
             outputF1Score(self.config, logger, ys, self.config.baseclass*np.ones(len(ys)), "Baseline")
             logger.info("\n")
             outputF1Score(self.config, logger, ys, labs, "Model")
             outputPerfProp(ys, labs, lead_props, self.config.perfleadprop_output, bins=5, 
                 av=self.config.f1_mode, output_size=self.config.output_size)
+
+            for eval_perf_class in range(0, self.config.output_size):
+                filename = self.config.output_path + "perf_leadprop_{}.png".format(eval_perf_class)
+                outputPerfProp(ys, labs, lead_props, filename,
+                    bins=5, av=self.config.f1_mode, output_size=self.config.output_size, 
+                    eval_perf_class=eval_perf_class, part_min=self.config.part_min)
 
             if test_raw is not None and export_result is not None:
                 export_result(self.config, logger, ys, labs, test_raw)
