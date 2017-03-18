@@ -8,6 +8,7 @@ from core.features.simple import simple_features, get_default_processing
 from core.models.input import FlatInput
 from core.utils.evaluate import baseline
 from core.utils.data import get_xy
+
 # load config
 options = args("baseline")
 config = importlib.import_module("configs."+options.config)
@@ -15,7 +16,7 @@ config = apply_options(config, options)
 
 # data extraction
 featurizer = simple_features(config.tops, config.feature_mode)
-preprocess = lambda cluster: (featurizer(cluster), cluster["nparts"])
+preprocess = lambda cluster: (featurizer(cluster), cluster["nparts"], cluster["props"])
 featurizer_raw = wrap_extractor(config.extractor)
 preprocess_raw = lambda cluster: (featurizer_raw(cluster), cluster["nparts"])
 

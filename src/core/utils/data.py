@@ -30,15 +30,16 @@ def minibatches(data, minibatch_size, shuffle=True):
 
     # if data generator is just a generator of x, y
     else:
-        x_batch, y_batch = [], []
-        for (x, y), i in data:
+        x_batch, y_batch, p_batch = [], [], []
+        for (x, y, p), i in data:
             if len(x_batch) == minibatch_size:
-                yield x_batch, y_batch
-                x_batch, y_batch = [], []
+                yield x_batch, y_batch, p_batch
+                x_batch, y_batch, p_batch = [], [], []
             x_batch += [x]
             y_batch += [y]
+            p_batch += [p]
         if len(x_batch) != 0:
-            yield x_batch, y_batch
+            yield x_batch, y_batch, p_batch
 
 def get_xy(data):
     """

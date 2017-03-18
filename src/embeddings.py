@@ -1,6 +1,6 @@
 import importlib
 from core.utils.preprocess import preprocess_y
-from core.utils.evaluate import featurized_export_result
+from core.utils.evaluate import featurized_export_result, export_clustering
 from core.features.layers import wrap_extractor
 from core.features.embeddings import embedding_features, get_default_processing
 from core.utils.general import args, apply_options
@@ -32,4 +32,6 @@ processing = get_default_processing(train_examples, config.n_features,
 model = EmbeddingsInput(config)
 model.build()
 model.train(train_examples, dev_set, processing)
-acc, base = model.evaluate(test_set, processing, test_raw, featurized_export_result)
+acc, base = model.evaluate(test_set, processing)
+export_clustering(model, "embedding", test_set, processing, config, default=True, n_components=3)
+

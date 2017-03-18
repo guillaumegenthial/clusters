@@ -1,13 +1,18 @@
 import copy
 import itertools
+from collections import defaultdict
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, f1_score, \
     precision_score, recall_score
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 from core.features.layers import Extractor
 from general import check_dir
+from core.features.layers import get_custom_extractor
+
 
 # deactivate undefined metric warning from sklearn
 import warnings
@@ -43,8 +48,10 @@ def export_matrices(matrices, path="plots/", suffix="", vmin=-50, vmax=1000):
                 plt.figure()
                 m = copy.deepcopy(m_)
                 m[m == 0] = np.nan
-                # plt.imshow(m, interpolation='nearest', cmap="bwr",  vmin=vmin, vmax=vmax)
-                plt.imshow(m, interpolation='nearest', cmap="bwr")
+                if mode_ != "cluster":
+                    plt.imshow(m, interpolation='nearest', cmap="bwr")
+                else:
+                    plt.imshow(m, interpolation='nearest', cmap="Accent",  vmin=1, vmax=vmax)
                 plt.colorbar()
                 plt.grid(True)
                 plt.savefig(path+"layer_{}_{}{}.png".format(i_, mode_, suffix))
@@ -103,7 +110,133 @@ def featurized_export_result(config, logger, tar, lab, test_raw=None):
                 path = config.plot_output + "true_{}_pred{}/".format(t, l)
                 check_dir(path)
                 export_matrices(x, path, "_raw")
+
+            if len(tar_lab_seen) == config.output_size*config.output_size:
+                break
                 
+
+def export_clustering(model, node_name, test_set, processing, config, default=True, n_components=5):
+    """
+    Args:
+        model: a tf model
+        test_set: generator of (x, y), no_event
+        processing: function to preprocess test_set x, y
+        config: module config
+        extractor: takes a dict of dict
+        n_components: perform pca before clustering (no flattening of norm)
+    """
+    # get index in features of eta, phi and dep
+    eta_idx = phi_idx = dep_idx = e_density_idx = None
+    for idx, mode in enumerate(config.modes):
+        if mode == "eta":
+            eta_idx = idx
+        if mode == "phi":
+            phi_idx = idx
+        if mode == "dep":
+            dep_idx = idx
+        if mode == "e_density":
+            e_density_idx = idx
+
+    tar_lab_seen = set()
+    for (x, y), _ in test_set:
+        # np array, truth nparticles, predicted nparticles
+        node_eval, tar, lab = model.eval_node(x, y, node_name, processing)
+        tar, lab = tar[0] + 1, lab[0] + 1
+
+        if (tar, lab) not in tar_lab_seen:
+            print "- extracting layers for true label {}, pred {} in {}".format(
+                                            tar, lab, config.plot_output)
+
+            tar_lab_seen.add((tar, lab))
+            # reduce dimensionality
+            pca = PCA(n_components=5)
+            pca.fit(node_eval)
+            # compute kmeans
+            kmeans = KMeans(init='k-means++', n_clusters=int(lab), n_init=10)
+            clusters = kmeans.fit_predict(node_eval)
+
+            # recreate cells for plotting
+            cells = dict()
+            for i, (v, cluster) in enumerate(zip(x, clusters)):
+                cells[i] = {"eta": v[eta_idx],
+                            "phi": v[phi_idx],
+                            "dep": v[dep_idx],
+                            "e_density": v[e_density_idx],
+                            "cluster": cluster + 1}
+            eta_center = np.mean([c["eta"] for i, c in cells.iteritems()])
+            phi_center = np.mean([c["phi"] for i, c in cells.iteritems()])
+
+            if default:
+                extractor = config.extractor
+                extractor.modes = ["e_density", "cluster"]
+                extractor.filter_mode = "e_density"
+            
+            else:
+                extractor = get_custom_extractor(cells, eta_center, phi_center)
+
+            matrices = extractor(cells, eta_center, phi_center)
+            extractor.generate_report()
+
+            path = config.plot_output + "true_{}_pred{}/".format(tar, lab)   
+            check_dir(path)
+            export_matrices(matrices, path, vmax=config.output_size+1)
+
+        if len(tar_lab_seen) == config.output_size*config.output_size:
+            break
+
+def get_min_delta(l):
+    ll = []
+    for i, e in enumerate(l):
+        for j in range(i, len(l)):
+            if (abs(e - l[j])) > 0.01:
+                ll += [abs(e - l[j])]
+    if len(ll) == 0:
+        return 0.1
+
+    return min(min(ll), 0.1)
+
+def get_min_deltaR(l):
+    ll = []
+
+    for i, e in enumerate(l):
+        for j in range(i, len(l)):
+            d = deltaR(e, l[j])
+            if d > 0.001:
+                ll += [d]
+
+    if len(ll) == 0:
+        return 0.1
+
+    return min(min(ll), 0.1)
+
+def get_min_deltas(l):
+    l0 = []
+    l1 = []
+
+    for i, e in enumerate(l):
+        for j in range(i, len(l)):
+            d = deltaR(e, l[j])
+            deta = abs(e[0] - l[j][0])
+            dphi = abs(e[1] - l[j][1])
+            if deta > 0.5*d and deta > 0.001:
+                l0 += [deta]
+            if dphi > 0.5*d and dphi > 0.001:
+                l1 += [dphi]
+
+    if len(l0) == 0:
+        deta = 0.1
+    else:
+        deta = min(l0)
+    if len(l1) == 0:
+        dphi = 0.1
+    else:
+        dphi = min(l1)
+
+    return deta, dphi
+
+
+def deltaR(e, f):
+    return np.sqrt((e[0]-f[0])**2 + (e[1]-f[1])**2)
 
 
 def dump_results(target, label, path):
@@ -141,9 +274,30 @@ def outputConfusionMatrix(tar, lab, output_size, filename):
     plt.savefig(filename)
     plt.close()
 
+def outputPerfProp(tar, lab, lead_props, filename, bins=8, av="macro", output_size=2):
+    tars = defaultdict(list)
+    labs = defaultdict(list)
+    f1s = [0]*bins
+    for t, l, p in zip(tar, lab, lead_props):
+        idx = min(int(p*bins), bins-1)
+        tars[idx] += [t]
+        labs[idx] += [l]
+
+    for b in range(bins):
+        f1 = f1_score(tars[b], labs[b], labels=range(output_size), average=av)
+        f1s[b] = f1
+
+    plt.figure()
+    plt.plot(map(lambda x: x/float(bins) + 1./float(2*bins),range(bins)), f1s)
+    plt.xlabel('Fraction of the leading particle')
+    plt.ylabel('F1 score - {}'.format(av))
+    plt.savefig(filename)
+    plt.close()
+
+
 def outputF1Score(config, logger, tar, lab, name, labels=None):
     if labels is None:
-        labels = range(config.output_size)  
+        labels = range(config.output_size)
 
     averages = ["micro", "macro", "weighted"]
 

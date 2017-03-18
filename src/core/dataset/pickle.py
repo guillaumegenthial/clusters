@@ -26,7 +26,8 @@ def make_datasets(config, preprocess=None, preprocess_raw=None):
         files_test  = load_files_from_config(test_config_file)
     else:
         # get all files in path
-        files       = get_all_files(config.path, config.shuffle)[:config.max_iter]
+        # force the shuffling
+        files       = get_all_files(config.path, True)[:config.max_iter]
         index_dev   = int(config.dev_size*len(files))
         index_test  = int(config.test_size*len(files))
         # list of file names
@@ -73,7 +74,7 @@ class DatasetPickle(DatasetBase):
 
         # not from config
         if files is None:
-            self.files = get_all_files(self.path, self.shuffle)
+            self.files = get_all_files(self.path, True)
         else:
             self.files = files
         self.preprocess = preprocess
@@ -82,8 +83,9 @@ class DatasetPickle(DatasetBase):
         # general
         self.path = config.path
         self.shuffle = config.shuffle
+        self.shuffle_clusters = config.shuffle_clusters
 
-        # filteron jets
+        # filter on jets
         self.jet_filter = config.jet_filter
         self.jet_min_pt = config.jet_min_pt
         self.jet_max_pt = config.jet_max_pt
@@ -108,7 +110,7 @@ class DatasetPickle(DatasetBase):
                 break
             # list of clusters
             clusters = pickle_load(self.path + "/" + file, verbose=False)
-            if self.shuffle:
+            if self.shuffle_clusters:
                 random.shuffle(clusters)
 
             for cluster in clusters:
@@ -122,7 +124,7 @@ class DatasetPickle(DatasetBase):
                     
                 if self.topo_filter:
                     if not ((self.topo_min_pt < cluster["topo_pt"] < self.topo_max_pt) and
-                        (self.topo_min_eta < cluster["topo_eta"] < self.topo_max_eta)):
+                        (self.topo_min_eta < abs(cluster["topo_eta"]) < self.topo_max_eta)):
                         continue
 
                 if self.preprocess is not None:

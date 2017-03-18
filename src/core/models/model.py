@@ -10,7 +10,8 @@ from core.utils.tf import xavier_weight_init, conv2d, \
 from core.utils.general import  Progbar, check_dir, get_all_dirs
 from core.utils.data import minibatches, get_xy
 from core.utils.evaluate import raw_export_result, baseline, \
-    outputConfusionMatrix, outputF1Score, dump_results, f1score
+    outputConfusionMatrix, outputF1Score, dump_results, f1score, \
+    outputPerfProp
 
 logger = logging.getLogger('logger')
 logger.setLevel(logging.DEBUG)
@@ -29,7 +30,8 @@ class Model(object):
         self.config.model_output = self.config.output_path + "model.weights/"
         self.config.eval_output = self.config.output_path + "results.txt"
         self.config.confmatrix_output = self.config.output_path + "confusion_matrix.png"
-        self.config.config_output = self.config.output_path + "config.py"
+        self.config.perfleadprop_output = self.config.output_path + "perf_leadprop.png"
+        self.config.config_output = self.config.output_path
         self.config.plot_output = self.config.output_path + "plots/"
         self.config.log_output = self.config.output_path + "log"
 
@@ -177,7 +179,7 @@ class Model(object):
         saver.save(sess, self.config.model_output)
 
     def run_baseline(self, test_set, processing=None):
-        test_x, test_y = get_xy(test_set)
+        test_x, test_y, test_p = get_xy(test_set)
         if processing is not None:
             test_x, test_y, mask = processing(test_x, test_y)
 
@@ -190,8 +192,8 @@ class Model(object):
         """
         Computes evaluation over a test set an log it
         """
-        ys, labs, accs = [], [], []
-        for (x, y) in minibatches(test_set, self.config.batch_size):
+        ys, labs, accs, lead_props = [], [], [], []
+        for (x, y, p) in minibatches(test_set, self.config.batch_size):
             if processing is not None:
                 x, y, m = processing(x, y)
 
@@ -201,6 +203,7 @@ class Model(object):
             ys   += [y]
             labs += [lab]
             accs  += [acc]
+            lead_props += [max(p_ if len(p_) != 0 else [0]) for p_ in p]
 
         acc = np.mean(accs)
         labs = np.concatenate(labs, axis=0)
@@ -210,7 +213,7 @@ class Model(object):
         logger.info("- dev acc: {:04.2f} (baseline {:04.2f}) f1: {:04.2f} (baseline {:04.2f})".format(
             acc * 100.0, base_acc * 100.0, f1 * 100.0, base_f1*100.0))
 
-        return acc, f1, ys, labs
+        return acc, f1, ys, labs, lead_props
 
     def run_epoch(self, sess, epoch, train_examples, dev_set, dev_baseline, dev_baseline_f1, processing=None):
         """
@@ -227,7 +230,7 @@ class Model(object):
         n_batches = (len(train_examples) + self.config.batch_size - 1) / self.config.batch_size
         logger.info("Epoch {:} out of {:}".format(epoch + 1, self.config.n_epochs))
         prog = Progbar(target=n_batches)
-        for i, (train_x, train_y) in enumerate(minibatches(train_examples, 
+        for i, (train_x, train_y, train_p) in enumerate(minibatches(train_examples, 
                                                 self.config.batch_size)):
 
             if processing is not None:
@@ -240,9 +243,13 @@ class Model(object):
             if i % 10 == 0:
                 self.file_writer.add_summary(summary, epoch*n_batches + i)
 
+            if time.time() - self.t_begin > self.config.max_training_time:
+                logger.info("\nMax time elapsed. Early Stopping")
+                break
+
         logger.info("Evaluating on dev set")
         
-        acc, dev_f1, _, _ = self.run_evaluate(sess, dev_set, dev_baseline, dev_baseline_f1, processing)
+        acc, dev_f1, _, _, _ = self.run_evaluate(sess, dev_set, dev_baseline, dev_baseline_f1, processing)
 
         return acc, dev_f1
 
@@ -258,6 +265,8 @@ class Model(object):
             computes performance at each epoch and saves model if best
         """
         best_score = 0
+        nb_ep_no_imprvmt = 0
+        self.t_begin = time.time()
         
         dev_base_acc, dev_base_f1 = self.run_baseline(dev_set, processing)
 
@@ -280,12 +289,23 @@ class Model(object):
                     dev_base_acc, dev_base_f1, processing)
 
                 score = dev_f1 if self.config.selection == "f1" else acc
-                if score > best_score:
+                if score >= best_score:
+                    nb_ep_no_imprvmt = 0
                     logger.info("- new best {}! saving model in {}".format(
                         self.config.selection, self.config.model_output))
                     best_score = score
                     self.save(saver, sess, self.config.model_output)
+                else:
+                    nb_ep_no_imprvmt += 1
+                    if (self.config.early_stopping and nb_ep_no_imprvmt >= self.config.nb_ep_no_imprvmt):
+                        logger.info("- {} epochs without improvement. Early Stopping".format(nb_ep_no_imprvmt))
+                        break
+                if time.time() - self.t_begin > self.config.max_training_time:
+                    logger.info("\nMax time elapsed. Early Stopping")
+                    break
 
+
+                
     def evaluate(self, test_set, processing=None, test_raw=None, export_result=None):
         """
         Reload weights and test on test set
@@ -314,13 +334,15 @@ class Model(object):
             logger.info("Restoring model from {}".format(self.config.model_output))
             saver.restore(sess, self.config.model_output)
             
-            acc, test_f1, ys, labs = self.run_evaluate(sess, test_set, 
+            acc, test_f1, ys, labs, lead_props = self.run_evaluate(sess, test_set, 
                                 test_base_acc, test_base_f1, processing)
 
             outputConfusionMatrix(ys, labs, self.config.output_size, self.config.confmatrix_output)
             outputF1Score(self.config, logger, ys, self.config.baseclass*np.ones(len(ys)), "Baseline")
             logger.info("\n")
             outputF1Score(self.config, logger, ys, labs, "Model")
+            outputPerfProp(ys, labs, lead_props, self.config.perfleadprop_output, bins=5, 
+                av=self.config.f1_mode, output_size=self.config.output_size)
 
             if test_raw is not None and export_result is not None:
                 export_result(self.config, logger, ys, labs, test_raw)
@@ -366,7 +388,33 @@ class Model(object):
         """
         Copies config file to outputpath
         """
-        copyfile(self.config.__file__.split(".")[-2]+".py", self.config.config_output)
+        for file in self.config.config_files:
+            copyfile(file, self.config.config_output + file.split("/")[-1])
+
+    def eval_node(self, x, y, node_name, processing=None):
+        """
+        Evaluate model at node_name on data example x, y (single)
+        Args:
+            x: cells
+            y: the label
+            node_name: name of node to eval
+            processing: function that take x, y batches and return x, y, mask
+        Returns:
+            evaluation of the nodes on the example x, y (only valid, extract mask)
+        """
+        # batch the x, y
+        x, y = [x], [y]
+       
+        saver = tf.train.Saver()
+        with tf.Session() as sess:
+            saver.restore(sess, self.config.model_output)
+            if processing is not None:
+                x, y, m = processing(x, y)
+
+            fd = self.get_feed_dict(x, 1.0, y, m)
+            lab, node_eval = sess.run([self.label, self.nodes[node_name].name], feed_dict=fd)
+
+        return node_eval[0][:int(np.sum(m))], y, lab
 
 
     

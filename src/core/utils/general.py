@@ -13,8 +13,12 @@ def apply_options(config, options):
         config (module) with parameters
         options : returned by args
     Returns:
-        config module
+        config class
     """
+    file = config.__file__.split(".")[-2]+".py"
+    print file
+    config = config.config
+    config.config_files = [config.config_files, file]
     if options.test:
         config.max_iter = 10
         config.n_epochs = 2

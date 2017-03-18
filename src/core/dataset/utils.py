@@ -224,14 +224,14 @@ def nb_of_truth_parts(mytree, j):
         nparts: (int) nb of truth particles that deposited > 0.1
     """
     nparts = 0
+    props = []
     for k in range(len(mytree.Topocluster_truthEfrac[j])):
         prop = mytree.Topocluster_truthEfrac[j][k]
         if (prop > 0.1):
             nparts+=1
-            pass
-        pass
+            props += [prop]
 
-    return nparts
+    return nparts, sorted(props, reverse=True)
 
 def full_nb_of_truth_parts(mytree, j):
     """

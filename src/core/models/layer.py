@@ -60,6 +60,8 @@ class FullyConnected(Layer):
             if len(self.input_shape) == 3:
                 inputs = tf.reshape(inputs, [-1, self.input_shape[-1]])
             
+            # inputs = (None, length, embedding_size)
+            # W = (embeddings__isze, output_size)
             result = tf.matmul(inputs, W)
 
             if len(self.input_shape) == 3:
@@ -238,10 +240,13 @@ class Expand(Layer):
         self.output_shape = self.input_shape[:self.axis] + [1] + self.input_shape[self.axis:]
 
 class Squeeze(Layer):
+    def __init__(self, axis, name=None, input_names=[]):
+        Layer.__init__(self, name, input_names)
+        self.axis = axis
 
     def __call__(self, inputs, mask=None):
         with tf.variable_scope(self.name):
-            return tf.squeeze(inputs)
+            return tf.squeeze(inputs, axis=self.axis)
 
     def update_param(self):
         self.output_shape = [s for s in self.input_shape if s != 1]

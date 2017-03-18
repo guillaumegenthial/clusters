@@ -25,13 +25,13 @@ def get_mode(cell, mode):
     Returns:
         float corresponding to the mode
     """
-    if mode in ["e", "vol", "eta", "phi"]:
+    if mode in cell.keys():
         return cell[mode]
     if mode == "e_density":
         return e_density(cell["e"], cell["vol"])
     if mode == "pT":
         return pT(cell["e"], cell["eta"])
-    if mode == "dep":
+    if mode == "dep_one_hot":
         dep = int(cell["dep"])
         v = [0]*(dep) + [1] + [0]*(23-dep)
         return v

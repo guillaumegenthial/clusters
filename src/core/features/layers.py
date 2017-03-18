@@ -126,11 +126,12 @@ class LayerExtractor(object):
         return eta_id, phi_id
 
 class Extractor(object):
-    def __init__(self, layer_extractors, modes=["e", "vol"]):
+    def __init__(self, layer_extractors, modes=["e", "vol"], filter_mode="e"):
         self.layer_extractors = layer_extractors
         self.preservation_ratio = {dep: {"cell": 0, "mat": 0} 
                         for dep in layer_extractors.iterkeys()}
         self.modes = modes
+        self.filter_mode = filter_mode
 
     def __call__(self, cells, topo_eta, topo_phi):
         """
@@ -160,11 +161,14 @@ class Extractor(object):
                 self.preservation_ratio[dep]["cell"] += 1
                 eta_id, phi_id = layer_extractors[dep](cell_, topo_eta, topo_phi)
                 for mode in self.modes:
-                    matrices[dep][mode][phi_id, eta_id] += get_mode(cell_, mode)
-                    
+                    if mode != "cluster":
+                        matrices[dep][mode][phi_id, eta_id] += get_mode(cell_, mode)
+                    else:
+                        matrices[dep][mode][phi_id, eta_id] = get_mode(cell_, mode)
+        
         for dep, modes_ in matrices.iteritems():
-            self.preservation_ratio[dep]["mat"] += np.count_nonzero(modes_["e"])
-            if np.sum(modes_["e"]) == 0:
+            self.preservation_ratio[dep]["mat"] += np.count_nonzero(modes_[self.filter_mode])
+            if np.sum(modes_[self.filter_mode]) == 0:
                 for mode in self.modes:
                     modes_[mode] = modes_[mode].shape
 
@@ -191,9 +195,29 @@ class Extractor(object):
         """
         for dep, counts in self.preservation_ratio.iteritems():
             ratio = self.get_preservation_ratio(dep)
-            print "Layer {}, cell_count {}, mat_count {}, ratio {}".format(
+            if ratio != 0:
+                print "Layer {}, cell_count {}, mat_count {}, ratio {}".format(
                                   dep, counts["cell"], counts["mat"], ratio)
 
+
+def get_custom_extractor(cells, eta_center, phi_center):
+    layer_extractors = dict()
+    for l in range(24):
+        etas = [c["eta"] for i, c in cells.iteritems() if c["dep"] == l]
+        phis = [c["phi"] for i, c in cells.iteritems() if c["dep"] == l]
+        d_eta, d_phi = get_min_deltas(zip(etas, phis))
+
+        if len(etas) != 0:
+            r_etas = 2*max([abs(e - eta_center) for e in etas])
+            r_phis = 2*max([abs(e - phi_center) for e in phis])
+        else:
+            r_etas = r_phis = 1.5
+        r_etas = max(r_etas, d_eta)
+        r_phis = max(r_phis, d_phi)
+
+        layer_extractors[l] = LayerExtractor(l, r_etas, d_eta, r_phis, d_phi)
+
+    extractor = Extractor(layer_extractors, ["e_density", "cluster"], "e_density")
 
 
 

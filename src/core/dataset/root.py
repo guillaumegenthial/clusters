@@ -50,7 +50,7 @@ class DatasetRoot(DatasetBase):
         max_iter = self.max_iter
         nb_iter = min(mytree.GetEntries(), max_iter) if max_iter else mytree.GetEntries()
 
-        for i in range(nb_iter+1):
+        for i in range(nb_iter):
             mytree.GetEntry(i)
 
             leadjets    = get_leadjets(mytree, min_pt=self.jet_min_pt, max_pt=self.jet_max_pt, 
@@ -74,13 +74,13 @@ class DatasetRoot(DatasetBase):
                         continue
 
                 cell_ids = [id_ for id_ in mytree.Topocluster_cellIDs[j]]
-                nparts = nb_of_truth_parts(mytree, j)
+                nparts, props = nb_of_truth_parts(mytree, j)
 
                 topo_cells = map_cells(cells, cell_ids)
 
                 yield {"topo_pt": topo_pt, "topo_eta": topo_eta, "topo_phi": topo_phi, 
                        "jet_pt": jet_pt, "jet_eta": jet_eta, "jet_phi": jet_phi, 
-                       "topo_cells": topo_cells, "nparts": nparts, }, i
+                       "topo_cells": topo_cells, "nparts": nparts, "props": props}, i
                        
             del cells
             del truth_parts

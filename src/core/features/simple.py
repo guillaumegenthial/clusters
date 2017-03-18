@@ -16,7 +16,7 @@ def get_default_processing(data, processing_y):
     m = None
     v = None
     n_examples = 0
-    for (x, y), i in data:
+    for (x, y, _), i in data:
         n_examples += 1
         if m is None:
             m = x
@@ -25,7 +25,7 @@ def get_default_processing(data, processing_y):
             m += x
             v += x**2
 
-        prog.update(i)
+        prog.update(min(i, data.max_iter-1))
 
     prog.update(i+1)
 

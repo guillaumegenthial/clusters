@@ -1,8 +1,11 @@
+import os
 import tensorflow as tf
+import numpy as np
 from model import Model
 from core.utils.tf import xavier_weight_init, conv2d, \
         max_pool_2x2, weight_variable, bias_variable
 from layer import FullyConnected, Dropout, Embedding, Flatten
+from tensorflow.contrib.tensorboard.plugins import projector
 
 
 class FlatInput(Model):
@@ -99,5 +102,28 @@ class EmbeddingsInput(Model):
 
         self.nodes = {"x": self.x}
         self.shapes = {"x": [None, self.config.max_n_cells, self.config.n_features]}
+
+
+    def visualize(self, node_eval, logdir):
+        
+        tf.reset_default_graph()
+        # summary_writer = tf.summary.FileWriter(logdir)
+        # projector_config = projector.ProjectorConfig()
+
+        embedding_var = tf.Variable(node_eval, "embeddings_viz")
+        print embedding_var.get_shape()
+
+        saver = tf.train.Saver()
+        with tf.Session() as sess:       
+            # embedding = projector_config.embeddings.add()
+            # embedding.tensor_name = "embedding"
+            # projector.visualize_embeddings(summary_writer, projector_config)
+            print tf.global_variables()
+
+            sess.run(tf.global_variables_initializer())
+            emb_eval = sess.run([embedding_var])
+            saver.save(sess, os.path.join(logdir, "model.ckpt"), 0)
+
+
 
    
