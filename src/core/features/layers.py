@@ -15,14 +15,25 @@ def get_default_processing(data, extractor, processing_y, statistics="default"):
     eps = 10^(-6)
     mean = dict()
     var = dict()
-    counts = dict()
+    mean_lay = dict()
+    var_lay = dict()
+    mean_mode = dict()
+    var_mode = dict()
+    counts_dep = dict()
+    for mode in extractor.modes:
+        mean_mode[mode] = 0
+        var_mode[mode] = 0
     for dep, l_ext in extractor.layer_extractors.iteritems():
             mean[dep] = dict()
             var[dep] = dict()
-            counts[dep] = 0
+            mean_lay[dep] = dict()
+            var_lay[dep] = dict()
+            counts_dep[dep] = 0
             for mode in extractor.modes:
                 mean[dep][mode] = np.zeros([l_ext.n_phi, l_ext.n_eta])
                 var[dep][mode] = np.zeros([l_ext.n_phi, l_ext.n_eta])
+                mean_lay[dep][mode] = 0
+                var_lay[dep][mode] = 0
 
     # get statistics
     prog = Progbar(target=data.max_iter)
@@ -36,20 +47,33 @@ def get_default_processing(data, extractor, processing_y, statistics="default"):
                 if type(dat) != tuple:
                     mean[dep][mode] += dat
                     var[dep][mode] += dat**2
+                    mean_lay[dep][mode] += np.mean(dat)
+                    var_lay[dep][mode] += np.mean(dat**2)
+                    mean_mode[mode] += np.mean(dat)
+                    var_mode[mode] += np.mean(dat**2)
                     found = True
             if found:
-                counts[dep] += 1
+                counts_dep[dep] += 1
 
     data.length = n_examples
     prog.update(i+1)
 
     # compute statistics
     for dep in mean.iterkeys():
-        counts_dep = counts[dep]
         for mode in extractor.modes:
-            mean[dep][mode] /= counts_dep
-            var[dep][mode] /= counts_dep
+            mean[dep][mode] /= counts_dep[dep]
+            var[dep][mode] /= counts_dep[dep]
             var[dep][mode] -= (mean[dep][mode])**2
+
+            mean_lay[dep][mode] /= counts_dep[dep]
+            var_lay[dep][mode] /= counts_dep[dep]
+            var_lay[dep][mode] -= (mean_lay[dep][mode])**2
+
+    total_dep_seen = sum(counts_dep.values())
+    for mode in extractor.modes:
+        mean_mode[mode] /= total_dep_seen
+        var_mode[mode] /= total_dep_seen
+        var_mode[mode] -= (mean_mode[mode])**2
 
     print "- done."
 
@@ -67,7 +91,26 @@ def get_default_processing(data, extractor, processing_y, statistics="default"):
                         n_eta = extractor.layer_extractors[dep].n_eta
                         mat_  = (np.zeros([n_phi, n_eta]))
 
-                    mat_ = (mat_ - mean[dep][mode]) / (np.sqrt(var[dep][mode]) + eps)
+                    if statistics == "default":
+                        mat_ = (mat_ - mean[dep][mode]) / (np.sqrt(var[dep][mode]) + eps)
+                    elif statistics == "mean":
+                        mat_ = (mat_ - mean[dep][mode])
+                    elif statistics == "scale":
+                        mat_ = (mat_) / (np.sqrt(var[dep][mode]) + eps)
+
+                    if statistics == "layer_default":
+                        mat_ = (mat_ - mean_lay[dep][mode]) / (np.sqrt(var_lay[dep][mode]) + eps)
+                    elif statistics == "layer_mean":
+                        mat_ = (mat_ - mean_lay[dep][mode])
+                    elif statistics == "layer_scale":
+                        mat_ = (mat_) / (np.sqrt(var_lay[dep][mode]) + eps)
+
+                    if statistics == "mode_default":
+                        mat_ = (mat_ - mean_mode[mode]) / (np.sqrt(var_mode[mode]) + eps)
+                    elif statistics == "mode_mean":
+                        mat_ = (mat_ - mean_mode[mode])
+                    elif statistics == "mode_scale":
+                        mat_ = (mat_) / (np.sqrt(var_mode[mode]) + eps)
 
                     result_ += [mat_]
 

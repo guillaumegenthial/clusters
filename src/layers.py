@@ -21,7 +21,8 @@ preprocess = lambda cluster: (featurizer(cluster), cluster["nparts"], cluster["p
 train_examples, dev_set, test_set, test_raw = make_datasets(config, preprocess, preprocess)
 
 # data processing
-processing = get_default_processing(train_examples, extractor, preprocess_y(config.part_min, config.output_size))
+processing = get_default_processing(train_examples, extractor, 
+    preprocess_y(config.part_min, config.output_size), "layer_scale")
 
 # model
 model = SquareInput(config, config.n_eta, config.n_phi, config.n_features)

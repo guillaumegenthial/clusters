@@ -24,6 +24,7 @@ class config(general):
 
     # model
     output_path = None
+    embedding_node = "embedding_2"
     layers = [
         # embedding
         FullyConnected(embedding_size, name="embedding"),
@@ -34,7 +35,7 @@ class config(general):
         Mask(val=-10000, name="mask"),
         Reduce(axis=1, op="max", keep_dims=True, name="max_pool"), 
         Squeeze(name="global", axis=1),
-        LastConcat(axis=2, input_names=["embedding", "max_pool"], name="concat"), 
+        LastConcat(axis=2, input_names=["embedding", "max_pool"], name="embedding_2"), 
         # FullyConnected(12*embedding_size, name="max_fc1"), 
         # ReLu(name="max_relu1"), 
         FullyConnected(2*embedding_size, name="max_fc2"), 

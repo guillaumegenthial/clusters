@@ -53,7 +53,8 @@ def get_default_processing(data, n_features, processing_y, max_length, pad_tok, 
     prog = Progbar(target=data.max_iter)
     n_examples = 0
     # get statistics
-    for (x, y), n_event in data:
+    for data_tuple, n_event in data:
+        x, y = data_tuple[0], data_tuple[1]
         n_examples += 1
         prog.update(n_event)
         for feat_cell in x:

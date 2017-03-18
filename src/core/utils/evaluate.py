@@ -139,7 +139,8 @@ def export_clustering(model, node_name, test_set, processing, config, default=Tr
             e_density_idx = idx
 
     tar_lab_seen = set()
-    for (x, y), _ in test_set:
+    for data_tuple, _ in test_set:
+        x, y = data_tuple[0], data_tuple[1]
         # np array, truth nparticles, predicted nparticles
         node_eval, tar, lab = model.eval_node(x, y, node_name, processing)
         tar, lab = tar[0] + 1, lab[0] + 1
@@ -298,9 +299,10 @@ def outputPerfProp(tar, lab, lead_props, filename, bins=8, av="macro", output_si
 
     plt.figure()
     plt.plot(map(lambda x: x/float(bins) + 1./float(2*bins),range(bins)), f1s)
-    x_lab = " - cluster with {} parts".format(eval_perf_class+part_min) if eval_perf_class is not None else ""
-    plt.xlabel('Fraction of the leading particle{}'.format(x_lab))
-    plt.ylabel('F1 score - {}'.format(av))
+    x_lab = "cluster with {} parts".format(eval_perf_class+part_min) if eval_perf_class is not None else "all clusters"
+    plt.xlabel('Fraction of the leading particle - {}'.format(x_lab))
+    y_lab = 'F1 score - {}'.format(av) if eval_perf_class is None else "Accuracy"
+    plt.ylabel(y_lab)
     plt.savefig(filename)
     plt.close()
 

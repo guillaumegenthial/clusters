@@ -16,7 +16,7 @@ config = apply_options(config, options)
 
 # data featurizer
 featurizer = embedding_features(config.modes)
-preprocess = lambda cluster: (featurizer(cluster), cluster["nparts"])
+preprocess = lambda cluster: (featurizer(cluster), cluster["nparts"], cluster["props"])
 featurizer_raw = wrap_extractor(config.extractor)
 preprocess_raw = lambda cluster: (featurizer_raw(cluster), cluster["nparts"])
 
@@ -26,12 +26,12 @@ train_examples, dev_set, test_set, test_raw = make_datasets(
 
 # data processing
 processing = get_default_processing(train_examples, config.n_features, 
-    preprocess_y(config.output_size), config.max_n_cells, config.pad_tok, "custom")
+    preprocess_y(config.part_min, config.output_size), config.max_n_cells, config.pad_tok, "custom")
 
 # model
 model = EmbeddingsInput(config)
 model.build()
 model.train(train_examples, dev_set, processing)
 acc, base = model.evaluate(test_set, processing)
-export_clustering(model, "embedding", test_set, processing, config, default=True, n_components=3)
+export_clustering(model, config.embedding_node, test_set, processing, config, default=True, n_components=3)
 
