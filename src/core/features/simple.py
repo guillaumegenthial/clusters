@@ -3,7 +3,7 @@ from utils import pT
 import numpy as np
 
 
-def get_default_processing(data, processing_y):
+def get_default_processing(data, processing_y, statistics="default"):
     """
     Compute statistics over data and outputs a function
     Args:
@@ -36,8 +36,17 @@ def get_default_processing(data, processing_y):
     data.length = n_examples
     print "- done."
 
-    return lambda x, y: ((x - m)/s, processing_y(y), None)
+    def f(x, y):
+        if statistics == "default":
+            return ((x - m)/s, processing_y(y), None)
+        elif statistics == "scale":
+            return ((x)/s, processing_y(y), None)
+            
+        elif statistics == "mean":
+            return ((x - m), processing_y(y), None)
 
+
+    return f
 
 def simple_features(tops=5, mode=3):
     """

@@ -22,6 +22,7 @@ class config(general):
     n_phi = layer_extractors.values()[0].n_phi
     n_eta = layer_extractors.values()[0].n_eta
     n_features = n_layers * len(modes)
+    preprocessing_mode = "layer_default"
 
     # model
     output_path = None

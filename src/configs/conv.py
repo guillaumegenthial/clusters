@@ -10,19 +10,17 @@ class config(general):
     exp_name = "conv"
 
     # features
-    tops = 2
-    feature_mode = 3
-    input_size = 17
     layer_extractors = dict()
     for l in range(24):
         layer_extractors[l] = LayerExtractor(l, 1.5, 0.1, 1.5, 0.1)
 
-    modes = ["e", "vol", "e_density"]
+    modes = ["e", "vol", "e_density", "pT"]
     extractor = Extractor(layer_extractors, modes)
     n_layers = len(layer_extractors)
     n_phi = layer_extractors.values()[0].n_phi
     n_eta = layer_extractors.values()[0].n_eta
     n_features = n_layers * len(modes)
+    preprocessing_mode = "layer_scale"
 
     # model
     output_path = None
@@ -34,6 +32,6 @@ class config(general):
         FullyConnected(1000, name="fc1"),
         ReLu(name="relu1"),
         Dropout(name="drop"),
-        FullyConnected(output_size, name="output_layer"),
+        FullyConnected(general.output_size, name="output_layer"),
         ]
 

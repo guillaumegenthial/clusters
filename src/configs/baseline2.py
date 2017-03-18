@@ -6,7 +6,7 @@ from general import general
 
 class config(general):
     exp_name = "baseline"
-
+    
     # features
     tops = 5
     feature_mode = 3
@@ -17,6 +17,7 @@ class config(general):
 
     modes = ["e", "vol", "e_density"]
     extractor = Extractor(layer_extractors, modes)
+    preprocessing_mode = "scale"
 
     # model
     output_path = None

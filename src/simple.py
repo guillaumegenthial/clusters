@@ -25,7 +25,8 @@ train_examples, dev_set, test_set, test_raw = make_datasets(
             config, preprocess, preprocess_raw)
 
 # data processing
-processing = get_default_processing(train_examples, preprocess_y(config.part_min, config.output_size))
+processing = get_default_processing(train_examples, 
+    preprocess_y(config.part_min, config.output_size), config.preprocessing_mode)
 
 # model
 model = FlatInput(config, config.input_size)

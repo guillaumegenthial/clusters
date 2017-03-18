@@ -19,7 +19,11 @@ def embedding_features(modes):
         for id_, cell_ in cells.iteritems():
             res = []
             for mode in modes:
-                feat = get_mode(cell_, mode) 
+                if mode in ["topo_pt", "topo_eta", "topo_phi"]:
+                    feat = d_[mode]
+                else:
+                    feat = get_mode(cell_, mode) 
+                    
                 if type(feat) == list:
                     res += feat
                 else:

@@ -17,6 +17,8 @@ class config(general):
 
     modes = ["e", "vol", "e_density"]
     extractor = Extractor(layer_extractors, modes)
+    preprocessing_mode = "default"
+
 
     # model
     output_path = None

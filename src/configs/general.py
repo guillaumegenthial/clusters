@@ -1,7 +1,7 @@
 class general(object):
     # general data
-    path = "data/events2"
-    max_iter = 46
+    path = "data/events"
+    max_iter = 2000
     train_files = "data/config_{}/train.txt".format(max_iter)
     dev_files = "data/config_{}/dev.txt".format(max_iter)
     test_files = "data/config_{}/test.txt".format(max_iter)
