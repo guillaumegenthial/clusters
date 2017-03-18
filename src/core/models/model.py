@@ -54,7 +54,7 @@ class Model(object):
         """
         raise NotImplementedError
 
-    def get_feed_dict(self, x, d, y=None, m=None):
+    def get_feed_dict(self, x, d, lr=None, y=None, m=None):
         """
         Return feed dict
         Args:
@@ -69,6 +69,8 @@ class Model(object):
             feed[self.y] = y
         if m is not None and hasattr(self, "m"):
             feed[self.m] = m
+        if lr is not None:
+            feed[self.lr] = lr
         return feed
 
     def add_prediction_op(self):
@@ -134,7 +136,7 @@ class Model(object):
         Defines self.train_op
         """
         with tf.variable_scope("train_step"):
-            optimizer = tf.train.AdamOptimizer(self.config.lr)
+            optimizer = tf.train.AdamOptimizer(self.lr)
             self.train_op = optimizer.minimize(self.loss)
 
 
@@ -197,7 +199,7 @@ class Model(object):
             if processing is not None:
                 x, y, m = processing(x, y)
 
-            fd = self.get_feed_dict(x, 1.0, y, m)
+            fd = self.get_feed_dict(x, 1.0, y=y, m=m)
             acc, lab = sess.run([self.accuracy, self.label], feed_dict=fd)
 
             ys   += [y]
@@ -236,7 +238,7 @@ class Model(object):
             if processing is not None:
                 train_x, train_y, mask = processing(train_x, train_y)
 
-            fd = self.get_feed_dict(train_x, self.config.dropout, train_y, mask)
+            fd = self.get_feed_dict(train_x, self.config.dropout, self.config.lr, train_y, mask)
             
             _, train_loss, summary = sess.run([self.train_op, self.loss, self.merged], feed_dict=fd)
             prog.update(i + 1, [("train loss", train_loss)])
@@ -287,6 +289,8 @@ class Model(object):
             for epoch in range(self.config.n_epochs):
                 acc, dev_f1 = self.run_epoch(sess, epoch, train_examples, dev_set, 
                     dev_base_acc, dev_base_f1, processing)
+
+                self.config.lr *= self.config.lr_ep_decay
 
                 score = dev_f1 if self.config.selection == "f1" else acc
                 if score >= best_score:
@@ -418,7 +422,7 @@ class Model(object):
             if processing is not None:
                 x, y, m = processing(x, y)
 
-            fd = self.get_feed_dict(x, 1.0, y, m)
+            fd = self.get_feed_dict(x, 1.0, y=y, m=m)
             lab, node_eval = sess.run([self.label, self.nodes[node_name].name], feed_dict=fd)
 
         return node_eval[0][:int(np.sum(m))], y, lab

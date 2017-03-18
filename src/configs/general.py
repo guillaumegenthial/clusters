@@ -36,8 +36,9 @@ class general(object):
     dropout = 0.5
     reg = 0.001
     lr = 0.001
+    lr_ep_decay = 0.7
     selection = "f1" or "acc"
     f1_mode = "macro"
     early_stopping = True
     nb_ep_no_imprvmt = 2
-    max_training_time = 10
+    max_training_time = 7500

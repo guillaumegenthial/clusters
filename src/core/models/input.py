@@ -21,6 +21,7 @@ class FlatInput(Model):
             shape=[None, self.config.input_size])
         self.y = tf.placeholder(tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
+        self.lr = tf.placeholder(dtype=tf.float32, shape=[])
 
         self.nodes = {"x": self.x}
         self.shapes = {"x": [None, self.config.input_size]}
@@ -41,13 +42,14 @@ class SquareInput(Model):
             shape=[None, n_phi, n_eta, n_features])
         self.y = tf.placeholder(tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
+        self.lr = tf.placeholder(dtype=tf.float32, shape=[])
 
         self.nodes = {"x": self.x}
         self.shapes = {"x": [None, n_phi, n_eta, n_features]}
 
 
 class IdInput(Model):
-    def get_feed_dict(self, x, d, y=None, m=None):
+    def get_feed_dict(self, x, d, lr=None, y=None, m=None):
         """
         Return feed dict
         Args:
@@ -61,6 +63,8 @@ class IdInput(Model):
                 self.dropout: d}
         if y is not None:
             feed[self.y] = y
+        if lr is not None:
+            feed[self.lr] = lr
         return feed
 
 
@@ -79,6 +83,7 @@ class IdInput(Model):
             shape=[None, self.config.max_n_cells, self.config.n_features], name="features")
         self.y = tf.placeholder(dtype=tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
+        self.lr = tf.placeholder(dtype=tf.float32, shape=[])
 
         self.nodes = {
             "features": self.features, 
@@ -99,6 +104,7 @@ class EmbeddingsInput(Model):
             shape=[None, self.config.max_n_cells], name="mask")
         self.y = tf.placeholder(dtype=tf.int32, shape=[None])
         self.dropout = tf.placeholder(dtype=tf.float32, shape=[])
+        self.lr = tf.placeholder(dtype=tf.float32, shape=[])
 
         self.nodes = {"x": self.x}
         self.shapes = {"x": [None, self.config.max_n_cells, self.config.n_features]}

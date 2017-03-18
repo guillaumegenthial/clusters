@@ -11,9 +11,9 @@ class config(general):
     exp_name = "embeddings"
 
     # features
-    max_n_cells = 150
+    max_n_cells = 300
     modes = ["e", "e_density", "eta", "phi", "vol", "pT", "dep", "topo_pt", "topo_eta", "topo_phi"]
-    n_features = 10
+    n_features = len(modes)
     embedding_size = 64
     pad_tok = np.zeros(n_features)
     output_size = 2
