@@ -6,14 +6,22 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-setwd("~/Documents/Stanford/Courses/PHY (Computer Vision for Particle Physics)/Code/explore/")
+setwd("~/Documents/Stanford/Courses/PHY (Computer Vision for Particle Physics)/Code/src/")
 library(ggplot2)
 library(MASS)
 ```
 
 ```{r}
-features <- read.csv("features.txt", header=TRUE)
+features <- read.csv("export.txt", header=TRUE)
 features$nparts <- factor(features$nparts)
+plot(features)
+```
+
+
+```{r}
+features <- read.csv("export", header=TRUE)
+features$nparts <- factor(features$nparts)
+plot(features)
 summary(features)
 names(features)
 plot(features$nparts, main="Distribution of npart")

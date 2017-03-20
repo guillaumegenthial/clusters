@@ -31,7 +31,7 @@ class general(object):
 
     # training
     batch_size = 20
-    n_epochs = 10
+    n_epochs = 15
     restore = False
     dropout = 0.5
     reg = 0.001
@@ -40,5 +40,5 @@ class general(object):
     selection = "f1" or "acc"
     f1_mode = "macro"
     early_stopping = True
-    nb_ep_no_imprvmt = 2
-    max_training_time = 7500
+    nb_ep_no_imprvmt = 3
+    max_training_time = 7200

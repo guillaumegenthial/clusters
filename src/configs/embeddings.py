@@ -26,6 +26,34 @@ class config(general):
     # model
     output_path = None
     embedding_node = "max_fc2"
+    # layers = [
+    #     # embedding
+    #     FullyConnected(embedding_size, name="embedding"),
+    #     FullyConnected(2*embedding_size, name="embed_fc1"), 
+    #     ReLu(name="embed_relu1"), 
+    #     FullyConnected(16*embedding_size, name="embed_fc2"), 
+    #     ReLu(name="embed_relu2"),
+    #     Mask(val=-10000, name="mask"),
+    #     Reduce(axis=1, op="max", keep_dims=True, name="max_pool"), 
+    #     Squeeze(name="global", axis=1),
+    #     LastConcat(axis=2, input_names=["embedding", "max_pool"], name="embedding_2"), 
+    #     FullyConnected(12*embedding_size, name="max_fc1"), 
+    #     ReLu(name="max_relu1"), 
+    #     FullyConnected(16*embedding_size, name="max_fc2"), 
+    #     ReLu(name="max_relu2"),
+    #     Mask(val=-10000, name="mask"),
+    #     Reduce(axis=1, op="max", keep_dims=False, name="max_pool_readout"),
+    #     Concat(axis=1, name="concat2", input_names=["max_pool_readout", "global"]), 
+    #     FullyConnected(8*embedding_size, name="flatten_fc1"), 
+    #     ReLu(name="flatten_relu1"),
+    #     FullyConnected(4*embedding_size, name="flatten_fc2"), 
+    #     ReLu(name="flatten_relu2"),
+    #     FullyConnected(2*embedding_size, name="flatten_fc3"), 
+    #     ReLu(name="flatten_relu3"),
+    #     Dropout(name="final_drop"),
+    #     FullyConnected(general.output_size, name="output_layer")
+    # ]
+
     layers = [
         # embedding
         FullyConnected(embedding_size, name="embedding"),

@@ -12,6 +12,7 @@ from core.utils.data import minibatches, get_xy
 from core.utils.evaluate import raw_export_result, baseline, \
     outputConfusionMatrix, outputF1Score, dump_results, f1score, \
     outputPerfProp
+from core.utils.preprocess import preprocess_y
 
 logger = logging.getLogger('logger')
 logger.setLevel(logging.DEBUG)
@@ -160,14 +161,17 @@ class Model(object):
         self.file_writer = tf.summary.FileWriter(self.config.output_path, sess.graph)
 
 
-    def build(self):
+    def build(self, mode="light"):
         logger.info("Building model")
 
         self.add_placeholder()
         self.add_prediction_op()
-        self.add_loss_op()
-        self.add_train_op()
-        self.add_accuracy()
+
+        if mode != "light":
+            self.add_loss_op()
+            self.add_train_op()
+        
+        self.add_accuracy()    
         self.add_init()
 
         logger.info("- done.")
@@ -402,7 +406,7 @@ class Model(object):
         for file in self.config.config_files:
             copyfile(file, self.config.config_output + file.split("/")[-1])
 
-    def eval_node(self, x, y, node_name, processing=None):
+    def eval_node(self, x, y, node_name, processing=None, restore_path=None):
         """
         Evaluate model at node_name on data example x, y (single)
         Args:
@@ -418,14 +422,65 @@ class Model(object):
        
         saver = tf.train.Saver()
         with tf.Session() as sess:
-            saver.restore(sess, self.config.model_output)
+            if restore_path is None:
+                saver.restore(sess, self.config.model_output)
+            else:
+                saver.restore(sess, restore_path)
+
             if processing is not None:
                 x, y, m = processing(x, y)
 
             fd = self.get_feed_dict(x, 1.0, y=y, m=m)
-            lab, node_eval = sess.run([self.label, self.nodes[node_name].name], feed_dict=fd)
+            if node_name != "pred":
+                lab, node_eval = sess.run([self.label, self.nodes[node_name].name], feed_dict=fd)
+            else:
+                lab, = sess.run([self.label], feed_dict=fd)
 
-        return node_eval[0][:int(np.sum(m))], y, lab
+        if node_name != "pred":
+            return node_eval[0][:int(np.sum(m))], y, lab
+        else:
+            return lab
 
 
-    
+    def combine(self, path1, path2, processing, test_set):
+        saver = tf.train.Saver()
+        sess1 = tf.Session()
+        saver.restore(sess1, path1)
+        sess2 = tf.Session()
+        saver.restore(sess2, path2)
+
+
+        ys, labs = [], []
+        exact_match = 0
+        for data_tuple, _ in test_set:
+            x, y = data_tuple[0], data_tuple[1]
+            y_true = preprocess_y(1, 3)([y])[0]
+            x, y = [x], [y]
+            x_, y_, m = processing(x, y)
+            y_ = preprocess_y(1, 2)(y_)
+            fd = self.get_feed_dict(x_, 1.0, y=y_, m=m)
+            lab_, = sess1.run([self.label], feed_dict=fd)
+            lab_ = lab_[0]
+            if lab_ == 1:
+                x_, y_, m = processing(x, y)
+                y_ = preprocess_y(2, 2)(y_)
+                fd = self.get_feed_dict(x_, 1.0, y=y_, m=m)
+                lab, = sess2.run([self.label], feed_dict=fd)
+                lab = lab[0]
+                lab += 1
+            else:
+                lab = lab_
+            ys += [y_true]
+            labs += [lab]
+            if lab == y_true:
+                exact_match += 1
+
+        self.config.output_size = 3
+
+        outputF1Score(self.config, logger, ys, self.config.baseclass*np.ones(len(ys)), "Baseline")
+        logger.info("\n")
+        outputF1Score(self.config, logger, ys, labs, "Model")
+        logger.info("Exact match: {:04.2f} ".format(100*exact_match/float(len(ys))))
+
+
+            

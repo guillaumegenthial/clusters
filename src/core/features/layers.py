@@ -61,18 +61,18 @@ def get_default_processing(data, extractor, processing_y, statistics="default"):
     # compute statistics
     for dep in mean.iterkeys():
         for mode in extractor.modes:
-            mean[dep][mode] /= counts_dep[dep]
-            var[dep][mode] /= counts_dep[dep]
+            mean[dep][mode] /= max(counts_dep[dep], 1)
+            var[dep][mode] /= max(counts_dep[dep], 1)
             var[dep][mode] -= (mean[dep][mode])**2
 
-            mean_lay[dep][mode] /= counts_dep[dep]
-            var_lay[dep][mode] /= counts_dep[dep]
+            mean_lay[dep][mode] /= max(counts_dep[dep], 1)
+            var_lay[dep][mode] /= max(counts_dep[dep], 1)
             var_lay[dep][mode] -= (mean_lay[dep][mode])**2
 
     total_dep_seen = sum(counts_dep.values())
     for mode in extractor.modes:
-        mean_mode[mode] /= total_dep_seen
-        var_mode[mode] /= total_dep_seen
+        mean_mode[mode] /= max(total_dep_seen, 1)
+        var_mode[mode] /= max(total_dep_seen, 1)
         var_mode[mode] -= (mean_mode[mode])**2
 
     print "- done."
